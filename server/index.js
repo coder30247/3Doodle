@@ -1,3 +1,4 @@
+// server/index.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -7,38 +8,27 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000', // Adjust if your frontend runs on a different origin
+    origin: 'http://localhost:3000', // Next.js frontend
     methods: ['GET', 'POST']
   }
 });
 
 io.on('connection', (socket) => {
-  console.log('🟢 A user connected:', socket.id);
+  console.log('A user connected:', socket.id);
 
-  socket.on('join-room', (roomId) => {
+  socket.on('joinRoom', (roomId) => {
     socket.join(roomId);
-    console.log(`👥 User ${socket.id} joined room ${roomId}`);
-    socket.to(roomId).emit('message', { text: `User ${socket.id} joined` });
-  });
-
-  socket.on('message', (data) => {
-    const roomId = [...socket.rooms][1]; // The first room is the socket's own room
-    io.to(roomId).emit('message', data);
-  });
-
-  socket.on('draw', (data) => {
-    const roomId = [...socket.rooms][1];
-    socket.to(roomId).emit('draw', data);
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
+    socket.emit('roomJoined');
   });
 
   socket.on('disconnect', () => {
-    console.log('🔴 A user disconnected:', socket.id);
+    console.log('A user disconnected:', socket.id);
   });
 });
 
-server.listen(3001, () => {
-  console.log('✅ Socket.IO server running on http://localhost:3001');
+server.listen(4000, () => {
+  console.log('Socket.IO server running on http://localhost:4000');
 });

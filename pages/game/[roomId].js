@@ -1,46 +1,46 @@
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import { initSocket } from '../../lib/socket';
+// pages/game/[roomId].js
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import io from "socket.io-client";
+
+let socket;
 
 export default function GameRoom() {
-  const router = useRouter();
-  const { roomId } = router.query;
+    const router = useRouter();
+    const { roomId } = router.query;
+    const [connected, setConnected] = useState(false);
 
-  const [socket, setSocket] = useState(null);
-  const [messages, setMessages] = useState([]);
+    useEffect(() => {
+        if (!roomId) return;
 
-  useEffect(() => {
-    if (!roomId) return;
+        // connect only once
+        if (!socket) {
+            socket = io("http://localhost:4000"); // Match the port above
+        }
 
-    const socketInstance = initSocket();
-    setSocket(socketInstance);
+        socket.emit("joinRoom", roomId);
 
-    socketInstance.emit('join-room', roomId);
+        socket.on("roomJoined", () => {
+            setConnected(true);
+        });
 
-    socketInstance.on('message', (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
+        socket.on("connect_error", (err) => {
+            console.error("Socket connect error:", err);
+        });
 
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, [roomId]);
+        return () => {
+            socket.disconnect();
+        };
+    }, [roomId]);
 
-  const sendMessage = () => {
-    if (socket) {
-      socket.emit('message', { text: 'Hello from 3Doodle!' });
-    }
-  };
-
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h2>🎨 Room: {roomId}</h2>
-      <button onClick={sendMessage}>Send Test Message</button>
-      <div>
-        {messages.map((msg, i) => (
-          <p key={i}>{msg.text}</p>
-        ))}
-      </div>
-    </div>
-  );
+    return (
+        <div style={{ textAlign: "center", marginTop: "5rem" }}>
+            <h1>🎮 Room Code: {roomId}</h1>
+            <p>
+                {connected
+                    ? "✅ Connected to room!"
+                    : "⏳ Connecting to room..."}
+            </p>
+        </div>
+    );
 }
