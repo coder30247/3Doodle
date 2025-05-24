@@ -1,46 +1,86 @@
-// components/GameCanvas.js
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 export default function GameCanvas({ socket, roomId }) {
-    const mountRef = useRef(null);
+  const mountRef = useRef(null);
+  const drawing = useRef(false);
+  const points = useRef([]);
+  const lineRef = useRef();
+  const sceneRef = useRef();
 
-    useEffect(() => {
-        // Setup scene
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-        mountRef.current.appendChild(renderer.domElement);
+  useEffect(() => {
+    if (!socket) return;
 
-        // Add a cube
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
+    const width = window.innerWidth * 0.75; // Adjust for chat sidebar
+    const height = window.innerHeight;
 
-        camera.position.z = 5;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    mountRef.current.appendChild(renderer.domElement);
+    sceneRef.current = scene;
 
-        const animate = function () {
-            requestAnimationFrame(animate);
+    camera.position.z = 5;
 
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
+    const animate = () => {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    };
+    animate();
 
-            renderer.render(scene, camera);
-        };
+    const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    const geometry = new THREE.BufferGeometry().setFromPoints([]);
+    const line = new THREE.Line(geometry, material);
+    scene.add(line);
+    lineRef.current = line;
 
-        animate();
+    const handlePointerDown = () => {
+      drawing.current = true;
+      points.current = [];
+    };
 
-        return () => {
-            mountRef.current.removeChild(renderer.domElement);
-        };
-    }, []);
+    const handlePointerUp = () => {
+      drawing.current = false;
+      socket.emit("draw", { roomId, points: points.current });
+    };
 
-    return (
-        <div
-            ref={mountRef}
-            style={{ width: "100%", height: "500px", background: "#000" }}
-        />
-    );
+    const handlePointerMove = (event) => {
+      if (!drawing.current) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const vector = new THREE.Vector3(x, y, 0).unproject(camera);
+      points.current.push(vector);
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(points.current);
+      lineRef.current.geometry.dispose();
+      lineRef.current.geometry = geometry;
+    };
+
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+
+    socket.on("draw", ({ points }) => {
+      const otherMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+      const geometry = new THREE.BufferGeometry().setFromPoints(
+        points.map((p) => new THREE.Vector3(p.x, p.y, p.z))
+      );
+      const otherLine = new THREE.Line(geometry, otherMaterial);
+      scene.add(otherLine);
+    });
+
+    return () => {
+      socket.off("draw");
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      if (mountRef.current) mountRef.current.removeChild(renderer.domElement);
+    };
+  }, [roomId, socket]);
+
+  return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
 }

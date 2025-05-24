@@ -1,58 +1,113 @@
-// pages/game/[roomId].js
-import { io } from "socket.io-client";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import io from "socket.io-client";
 import Chat from "../../components/Chat";
 
-// Lazy load your Three.js game to avoid SSR issues
-const GameCanvas = dynamic(() => import("../../components/GameCanvas"), { ssr: false });
+const GameCanvas = dynamic(() => import("../../components/GameCanvas"), {
+  ssr: false,
+});
 
 let socket;
 
 export default function GameRoom() {
-    const router = useRouter();
-    const { roomId } = router.query;
-    const [connected, setConnected] = useState(false);
+  const router = useRouter();
+  const { roomId } = router.query;
+  const [connected, setConnected] = useState(false);
 
-    useEffect(() => {
-        if (!roomId) return;
+  useEffect(() => {
+    if (!roomId) return;
 
-        if (!socket) {
-            socket = io("http://localhost:4000");
-        }
+    // Initialize socket if not already created
+    if (!socket) {
+      socket = io("http://localhost:4000", {
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
 
-        socket.emit("joinRoom", roomId);
+      socket.on("connect", () => {
+        console.log("[SOCKET] Connected:", socket.id);
+        setConnected(true);
+      });
 
-        socket.on("roomJoined", () => {
-            setConnected(true);
-        });
+      socket.on("disconnect", () => {
+        console.log("[SOCKET] Disconnected");
+        setConnected(false);
+      });
 
-        socket.on("connect_error", (err) => {
-            console.error("Socket connect error:", err);
-        });
+      socket.on("connect_error", (err) => {
+        console.error("[SOCKET] Connection error:", err.message);
+        setConnected(false);
+      });
+    }
 
-        return () => {
-            socket.disconnect();
-        };
-    }, [roomId]);
+    // Join room
+    socket.emit("joinRoom", roomId);
 
-    if (!roomId) return <p>Loading...</p>;
+    socket.on("roomJoined", () => {
+      console.log("[SOCKET] Room joined:", roomId);
+      setConnected(true);
+    });
 
-    return (
-        <div style={{ display: "flex", gap: "2rem", padding: "2rem" }}>
-            <div style={{ flex: 3, border: "1px solid #ddd", padding: "1rem" }}>
-                <h1>🎮 Room: {roomId}</h1>
-                {!connected ? (
-                    <p>⏳ Connecting to room...</p>
-                ) : (
-                    <GameCanvas socket={socket} roomId={roomId} />
-                )}
-            </div>
+    // Handle room join errors
+    socket.on("joinError", (error) => {
+      console.error("[SOCKET] Join error:", error);
+      setConnected(false);
+    });
 
-            <div style={{ flex: 1, maxWidth: "350px" }}>
-                <Chat roomId={roomId} />
-            </div>
-        </div>
-    );
+    return () => {
+      socket.off("roomJoined");
+      socket.off("joinError");
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
+    };
+  }, [roomId]);
+
+  // Disconnect socket on unmount
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        console.log("[SOCKET] Disconnecting socket");
+        socket.disconnect();
+        socket = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
+      {/* Game area */}
+      <div style={{ flex: 3, position: "relative" }}>
+        <h2 style={{ textAlign: "center" }}>🎮 Room: {roomId || "Loading..."}</h2>
+        {connected ? (
+          <GameCanvas socket={socket} roomId={roomId} />
+        ) : (
+          <p style={{ textAlign: "center" }}>
+            ⏳ Connecting to room...
+          </p>
+        )}
+      </div>
+
+      {/* Chat area */}
+      <div
+        style={{
+          flex: 1,
+          borderLeft: "1px solid #ccc",
+          padding: "1rem",
+          overflowY: "auto",
+          minWidth: "200px",
+        }}
+      >
+        {connected && socket ? (
+          <Chat socket={socket} roomId={roomId} />
+        ) : (
+          <p style={{ textAlign: "center" }}>
+            ⏳ Connecting to chat...
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
