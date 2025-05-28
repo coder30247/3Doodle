@@ -1,39 +1,21 @@
-import { useEffect, useState } from "react";
-import { auth } from "../lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import RoomSettingsModal from "../components/RoomSettingsModal";
+import LoginGate from "../components/LoginGate";
 import UserHeader from "../components/UserHeader";
-import AuthForm from "../components/AuthForm";
 import LogoutButton from "../components/LogoutButton";
+import Room_Menu from "../components/Room_Menu";
 
 export default function Home() {
-    const [user, setUser] = useState(null);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, []);
-
     return (
-        <main
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                marginTop: "5rem",
-            }}
-        >
-            <UserHeader user={user} />
-            {!user ? (
-                <AuthForm />
-            ) : (
-                <>
+        <LoginGate>
+            {({ user }) => (
+                <main className="flex flex-col items-center mt-20 space-y-6">
+                    <h1 className="text-3xl font-bold text-blue-600">
+                        Welcome to the Chat App
+                    </h1>
+                    <UserHeader user={user} />
                     <LogoutButton />
-                    <RoomSettingsModal />
-                </>
+                    <Room_Menu />
+                </main>
             )}
-        </main>
+        </LoginGate>
     );
 }
