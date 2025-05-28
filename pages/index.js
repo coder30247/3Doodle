@@ -1,6 +1,6 @@
 import LoginGate from "../components/LoginGate";
 import UserHeader from "../components/UserHeader";
-import LogoutButton from "../components/LogoutButton";
+import LogoutButton from "../components/button/LogoutButton";
 import Room_Menu from "../components/Room_Menu";
 
 export default function Home() {
