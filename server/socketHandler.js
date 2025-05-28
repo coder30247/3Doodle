@@ -7,9 +7,8 @@ module.exports = (io) => {
       console.log(`Socket ${socket.id} joined room ${roomId}`);
     });
 
-    socket.on('chatMessage', ({ roomId, username, message }) => {
-      // Emit message only to the users in the same room (including sender)
-      io.to(roomId).emit('chatMessage', { username, message });
+    socket.on("chatMessage", ({ roomId, username, text }) => {
+      io.to(roomId).emit("chatMessage", { username, text });
     });
 
     socket.on('disconnect', () => {

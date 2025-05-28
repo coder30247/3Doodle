@@ -1,102 +1,189 @@
-import { useEffect, useState } from "react";
+// Chat.js
+import React, { useState, useEffect, useRef } from "react";
 
-export default function Chat({ socket, roomId }) {
-  const [username, setUsername] = useState("");
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    if (!socket || !roomId) {
-      console.warn("[Chat] Socket or roomId missing:", { socket, roomId });
-      return;
-    }
-
-    // Listen for chat messages
-    socket.on("chatMessage", (data) => {
-      console.log("[Chat] Received chatMessage:", data);
-      setMessages((prev) => [...prev, data]);
-    });
-
-    // Handle chat errors
-    socket.on("chatError", (error) => {
-      console.error("[Chat] Chat error:", error);
-    });
-
-    return () => {
-      socket.off("chatMessage");
-      socket.off("chatError");
-    };
-  }, [socket, roomId]);
-
-  const sendMessage = () => {
-    if (!socket) {
-      console.warn("[Chat] Socket not connected!");
-      return;
-    }
-    if (message.trim() === "" || username.trim() === "") {
-      console.warn("[Chat] Empty message or username");
-      return;
-    }
-
-    const messageData = { roomId, username, message };
-    console.log("[Chat] Sending message:", messageData);
-    socket.emit("chatMessage", messageData);
-    setMessage("");
-  };
+const CircularWordButtonsPopup = ({ words, radius = 80, username, onWordClick }) => {
+  const [visible, setVisible] = useState(false);
+  const togglePopup = () => setVisible(v => !v);
+  const angleStep = (2 * Math.PI) / words.length;
 
   return (
-    <div
-      style={{
-        border: "1px solid #ccc",
-        padding: "1rem",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <h3>Chat Room: {roomId || "Unknown"}</h3>
-      <input
-        type="text"
-        placeholder="Your name"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        style={{ marginBottom: "0.5rem", width: "100%", padding: "0.5rem" }}
-      />
-      <input
-        type="text"
-        placeholder="Type a message..."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        style={{ marginBottom: "0.5rem", width: "100%", padding: "0.5rem" }}
-      />
+    <div style={{ position: "relative", display: "inline-block", margin: 20 }}>
       <button
-        onClick={sendMessage}
-        style={{ width: "100%", padding: "0.5rem", marginBottom: "1rem" }}
+        onClick={togglePopup}
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: "50%",
+          backgroundColor: "#4a90e2",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer",
+          border: "none",
+          userSelect: "none",
+        }}
+        title={`Click to toggle words for ${username}`}
       >
-        Send
+        {username}
       </button>
+
+      {visible && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: radius * 2,
+            height: radius * 2,
+            transform: "translate(-50%, -50%)",
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          {words.map((word, i) => {
+            const angle = angleStep * i - Math.PI / 2;
+            const x = radius + radius * Math.cos(angle) - 40 / 2;
+            const y = radius + radius * Math.sin(angle) - 25 / 2;
+
+            return (
+              <button
+                key={i}
+                onClick={() => onWordClick(word, username)}
+                style={{
+                  position: "absolute",
+                  top: y,
+                  left: x,
+                  width: 40,
+                  height: 25,
+                  borderRadius: 12,
+                  backgroundColor: "#f39c12",
+                  color: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  userSelect: "none",
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {word}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function Chat({ socket, roomId }) {
+  const [players, setPlayers] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+
+  // Replace this list with your own words or fetch dynamically
+  const words = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew"];
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for player list updates
+    socket.on("updatePlayers", (players) => {
+      setPlayers(players);
+    });
+
+    // Listen for chat messages
+    socket.on("chatMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    // Clean up on unmount
+    return () => {
+      socket.off("updatePlayers");
+      socket.off("chatMessage");
+    };
+  }, [socket]);
+
+  // Send chat message
+  const sendMessage = () => {
+    if (!input.trim()) return;
+    const username = localStorage.getItem("username") || "Anonymous";
+
+    socket.emit("chatMessage", {
+      roomId,
+      username,
+      text: input,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    });
+    setInput("");
+  };
+
+  // Handle clicking a word in the popup
+  const handleWordClick = (word, username) => {
+    alert(`User ${username} clicked word: ${word}`);
+    // You can also emit this event to server if you want
+    // socket.emit("wordSelected", { roomId, username, word });
+  };
+
+  // Styling for messages: different color if sent by current user
+  const currentUsername = localStorage.getItem("username") || "Anonymous";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", maxWidth: 500 }}>
+      <div style={{ display: "flex", gap: 15, flexWrap: "wrap", marginBottom: 20 }}>
+        {players.map((player) => (
+          <CircularWordButtonsPopup
+            key={player.id}
+            username={player.username}
+            words={words}
+            radius={80}
+            onWordClick={handleWordClick}
+          />
+        ))}
+      </div>
+
       <div
         style={{
-          flex: 1,
+          flexGrow: 1,
+          height: 250,
+          border: "1px solid #ccc",
+          padding: 10,
           overflowY: "auto",
-          border: "1px solid #ddd",
-          padding: "0.5rem",
+          marginBottom: 10,
+          backgroundColor: "#fafafa",
         }}
       >
-        {messages.length === 0 ? (
-          <p style={{ color: "#888", textAlign: "center" }}>
-            No messages yet...
-          </p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {messages.map((msg, idx) => (
-              <li key={idx} style={{ marginBottom: "0.5rem" }}>
-                <strong>{msg.username}:</strong> {msg.message}
-              </li>
-            ))}
-          </ul>
-        )}
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            style={{
+              marginBottom: 5,
+              textAlign: msg.username === currentUsername ? "right" : "left",
+              color: msg.username === currentUsername ? "#1a73e8" : "#333",
+              fontWeight: msg.username === currentUsername ? "bold" : "normal",
+            }}
+          >
+            <small>
+              {msg.username} {msg.timestamp}
+            </small>
+            <div>{msg.text}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex" }}>
+        <input
+          type="text"
+          placeholder="Type your message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sendMessage();
+          }}
+          style={{ flexGrow: 1, padding: 8 }}
+        />
+        <button onClick={sendMessage} style={{ marginLeft: 10, padding: "8px 16px" }}>
+          Send
+        </button>
       </div>
     </div>
   );

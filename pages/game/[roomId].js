@@ -1,113 +1,147 @@
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import io from "socket.io-client";
+import GameCanvas from "../../components/GameCanvas";
 import Chat from "../../components/Chat";
-
-const GameCanvas = dynamic(() => import("../../components/GameCanvas"), {
-  ssr: false,
-});
-
-let socket;
 
 export default function GameRoom() {
   const router = useRouter();
   const { roomId } = router.query;
-  const [connected, setConnected] = useState(false);
+  const socketRef = useRef(null);
+
+  const [players, setPlayers] = useState([]);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     if (!roomId) return;
 
-    // Initialize socket if not already created
-    if (!socket) {
-      socket = io("http://localhost:4000", {
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-      });
+    // Connect socket once
+    socketRef.current = io("http://localhost:4000");
 
-      socket.on("connect", () => {
-        console.log("[SOCKET] Connected:", socket.id);
-        setConnected(true);
-      });
-
-      socket.on("disconnect", () => {
-        console.log("[SOCKET] Disconnected");
-        setConnected(false);
-      });
-
-      socket.on("connect_error", (err) => {
-        console.error("[SOCKET] Connection error:", err.message);
-        setConnected(false);
-      });
+    const username = localStorage.getItem("username");
+    if (!username) {
+      alert("Please set a username before joining a game.");
+      router.push("/");
+      return;
     }
 
-    // Join room
-    socket.emit("joinRoom", roomId);
+    const isHostStored = localStorage.getItem("isHost") === "true";
+    const maxPlayers = parseInt(localStorage.getItem("maxPlayers")) || 4;
 
-    socket.on("roomJoined", () => {
-      console.log("[SOCKET] Room joined:", roomId);
-      setConnected(true);
+    setIsHost(isHostStored);
+
+    // Join the room with details
+    socketRef.current.emit("joinRoom", {
+      roomId,
+      username,
+      isHost: isHostStored,
+      maxPlayers,
     });
 
-    // Handle room join errors
-    socket.on("joinError", (error) => {
-      console.error("[SOCKET] Join error:", error);
-      setConnected(false);
-    });
-
-    return () => {
-      socket.off("roomJoined");
-      socket.off("joinError");
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
+    // Update player list when received
+    const updatePlayersHandler = (updatedPlayers) => {
+      setPlayers(updatedPlayers);
     };
-  }, [roomId]);
 
-  // Disconnect socket on unmount
-  useEffect(() => {
+    const roomFullHandler = () => {
+      alert("Room is full! Redirecting to homepage.");
+      router.push("/");
+    };
+
+    const gameStartedHandler = () => {
+      setGameStarted(true);
+    };
+
+    socketRef.current.on("updatePlayers", updatePlayersHandler);
+    socketRef.current.on("roomFull", roomFullHandler);
+    socketRef.current.on("gameStarted", gameStartedHandler);
+
     return () => {
-      if (socket) {
-        console.log("[SOCKET] Disconnecting socket");
-        socket.disconnect();
-        socket = null;
+      if (socketRef.current) {
+        socketRef.current.off("updatePlayers", updatePlayersHandler);
+        socketRef.current.off("roomFull", roomFullHandler);
+        socketRef.current.off("gameStarted", gameStartedHandler);
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, []);
+  }, [roomId, router]);
+
+  const handleStartGame = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("startGame", roomId);
+    }
+  };
+
+  const handleCancelGame = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("cancelGame", roomId);
+    }
+    router.push("/");
+  };
+
+  if (!roomId) {
+    return <div>Loading room...</div>;
+  }
+
+  if (gameStarted) {
+    return (
+      <div style={{ display: "flex", height: "100vh" }}>
+        <div style={{ width: "75%" }}>
+          <GameCanvas socket={socketRef.current} roomId={roomId} />
+        </div>
+        <div style={{ width: "25%" }}>
+          <Chat socket={socketRef.current} roomId={roomId} />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
-      {/* Game area */}
-      <div style={{ flex: 3, position: "relative" }}>
-        <h2 style={{ textAlign: "center" }}>🎮 Room: {roomId || "Loading..."}</h2>
-        {connected ? (
-          <GameCanvas socket={socket} roomId={roomId} />
-        ) : (
-          <p style={{ textAlign: "center" }}>
-            ⏳ Connecting to room...
-          </p>
-        )}
-      </div>
+    <div style={{ padding: "2rem", textAlign: "center" }}>
+      <h1>Waiting Room</h1>
+      <h2>Room ID: {roomId}</h2>
+      <h3>Players in the Room:</h3>
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        {players.map((player, idx) => (
+          <li key={idx}>
+            {player.username} {player.isHost ? "(Host)" : ""}
+          </li>
+        ))}
+      </ul>
 
-      {/* Chat area */}
-      <div
-        style={{
-          flex: 1,
-          borderLeft: "1px solid #ccc",
-          padding: "1rem",
-          overflowY: "auto",
-          minWidth: "200px",
-        }}
-      >
-        {connected && socket ? (
-          <Chat socket={socket} roomId={roomId} />
-        ) : (
-          <p style={{ textAlign: "center" }}>
-            ⏳ Connecting to chat...
-          </p>
-        )}
-      </div>
+      {isHost && (
+        <div style={{ marginTop: "2rem" }}>
+          <button
+            onClick={handleStartGame}
+            style={{
+              marginRight: "1rem",
+              padding: "0.5rem 1.5rem",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Start Game
+          </button>
+          <button
+            onClick={handleCancelGame}
+            style={{
+              padding: "0.5rem 1.5rem",
+              backgroundColor: "#dc3545",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Cancel Game
+          </button>
+        </div>
+      )}
     </div>
   );
 }
