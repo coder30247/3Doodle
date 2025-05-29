@@ -1,4 +1,4 @@
-export default function JoinRoomButton({ username }) {
+export default function JoinLobbyButton({ username }) {
   const handleJoin = () => {
     const roomId = prompt('Enter Room ID to join:');
     if (roomId && roomId.trim()) {

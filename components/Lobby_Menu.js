@@ -1,9 +1,9 @@
 import { useState } from "react";
 import UsernameInput from "./UsernameInput";
-import CreateRoomButton from "./button/CreateRoomButton";
-import JoinRoomButton from "./button/JoinRoomButton";
+import CreateRoomButton from "./button/CreateLobbyButton";
+import JoinRoomButton from "./button/JoinLobbyButton";
 
-export default function Room_Menu() {
+export default function Lobby_Menu() {
     const [username, setUsername] = useState("");
 
     return (

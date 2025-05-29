@@ -1,7 +1,8 @@
 import LoginGate from "../components/LoginGate";
 import UserHeader from "../components/UserHeader";
 import LogoutButton from "../components/button/LogoutButton";
-import Room_Menu from "../components/Room_Menu";
+import Room_Menu from "../components/Lobby_Menu";
+import Lobby_Menu from "../components/Lobby_Menu";
 
 export default function Home() {
     return (
@@ -13,7 +14,7 @@ export default function Home() {
                     </h1>
                     <UserHeader user={user} />
                     <LogoutButton />
-                    <Room_Menu />
+                    <Lobby_Menu />
                 </main>
             )}
         </LoginGate>

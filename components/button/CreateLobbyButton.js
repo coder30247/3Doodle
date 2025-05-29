@@ -1,4 +1,4 @@
-export default function CreateRoomButton({ username }) {
+export default function CreateLobbyButton({ username }) {
   const handleCreate = () => {
     console.log(`Creating room as ${username}`);
     // TODO: Room creation logic
