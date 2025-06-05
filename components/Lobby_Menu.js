@@ -1,7 +1,7 @@
 import { useState } from "react";
 import UsernameInput from "./UsernameInput";
-import CreateRoomButton from "./button/CreateLobbyButton";
-import JoinRoomButton from "./button/JoinLobbyButton";
+import CreateLobbyButton from "./button/CreateLobbyButton";
+import JoinLobbyButton from "./button/JoinLobbyButton";
 
 export default function Lobby_Menu() {
     const [username, setUsername] = useState("");
@@ -15,8 +15,8 @@ export default function Lobby_Menu() {
 
             {username.trim() !== "" && (
                 <div className="w-full space-y-4">
-                    <CreateRoomButton username={username} />
-                    <JoinRoomButton username={username} />
+                    <CreateLobbyButton username={username} />
+                    <JoinLobbyButton username={username} />
                 </div>
             )}
         </div>
