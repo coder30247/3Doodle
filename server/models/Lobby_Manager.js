@@ -20,7 +20,7 @@ Lobby Structure:
   id: string,                // Unique lobby ID (e.g., "lobby-abc123")
   name: string,              // Lobby display name (e.g., "Epic Battle")
   maxPlayers: number,        // 2-8 typically
-  players: Map<string, Player>, // Key: userID, Value: Player instance
+  players: Map<string, Player>, // Key: Firebase UID, Value: Player instance
   isPrivate: boolean,        // true/false for password protection
   createdAt: Date,           // Lobby creation timestamp
   gameState: 'lobby' | 'starting' | 'in-game' | 'finished', // Current state
@@ -34,7 +34,7 @@ function createLobby(lobbyConfig) {
         id: generateLobbyId(),
         name: lobbyConfig.name || `Lobby ${Math.floor(Math.random() * 1000)}`,
         maxPlayers: Math.min(Math.max(lobbyConfig.maxPlayers || 10, 2), 8), // clamp between 2 and 8
-        players: new Map(), // userId -> Player instance
+        players: new Map(), // Firebase UID -> Player instance
         isPrivate: Boolean(lobbyConfig.password),
         createdAt: new Date(),
         gameState: "lobby",
@@ -47,11 +47,20 @@ function createLobby(lobbyConfig) {
     return lobby;
 }
 
+// Clean up empty lobbies
+function cleanupLobby(lobbyId, activeLobbies) {
+    const lobby = activeLobbies.get(lobbyId);
+    if (lobby && lobby.players.size === 0) {
+        activeLobbies.delete(lobbyId);
+        console.log(`🗑️ Cleaned up empty lobby ${lobbyId}`);
+    }
+}
+
 // Export the lobby manager utilities
 module.exports = {
     Player,
     activeLobbies,
     generateLobbyId,
     hashPassword,
-//    cleanupLobby,
+    cleanupLobby,
 };
