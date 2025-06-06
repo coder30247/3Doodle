@@ -3,13 +3,60 @@ import { useRouter } from "next/router";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
 import { io } from "socket.io-client";
+import { SocketContext } from "../lib/socket";
+
+const initializeSocket = (currentUser, socketRef) => {
+    if (!currentUser) {
+        console.error("Attempted to initialize socket without user");
+        return null;
+    }
+    if (socketRef.current) {
+        console.log(
+            "Socket already initialized, skipping:",
+            socketRef.current.id
+        );
+        return socketRef.current;
+    }
+    console.log("Initializing Socket.IO for user:", currentUser.uid);
+    socketRef.current = io("http://localhost:4000", {
+        autoConnect: true,
+        reconnection: false,
+    });
+    socketRef.current.on("connect", () => {
+        console.log("Socket connected:", currentUser.uid, socketRef.current.id);
+        socketRef.current.emit("auth", {
+            firebaseUid: currentUser.uid,
+            username:
+                currentUser.displayName ||
+                (currentUser.isAnonymous ? "Guest" : "User"),
+        });
+    });
+    socketRef.current.on("error", (message) => {
+        console.error("Socket error:", message);
+    });
+    socketRef.current.on("connect_error", (error) => {
+        console.error("Socket connect error:", error.message);
+    });
+    socketRef.current.on("disconnect", (reason) => {
+        console.log(
+            "Socket disconnected:",
+            socketRef.current?.id,
+            "reason:",
+            reason
+        );
+    });
+    return socketRef.current;
+};
+
+export { initializeSocket };
 
 export default function LoginGate({ children }) {
     const [user, setUser] = useState(null);
+    const [socket, setSocket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loginError, setLoginError] = useState(null);
     const router = useRouter();
-    const socketRef = useRef(null); // Track socket instance
+    const socketRef = useRef(null);
 
     useEffect(() => {
         console.log("Setting up auth listener");
@@ -29,7 +76,12 @@ export default function LoginGate({ children }) {
                     if (!user || user.uid !== currentUser.uid) {
                         setUser(currentUser);
                         if (!socketRef.current) {
-                            initializeSocket(currentUser);
+                            // Only initialize if no socket exists
+                            const newSocket = initializeSocket(
+                                currentUser,
+                                socketRef
+                            );
+                            setSocket(newSocket);
                         }
                     }
                 } else {
@@ -52,53 +104,12 @@ export default function LoginGate({ children }) {
         };
     }, []);
 
-    const initializeSocket = (currentUser) => {
-        if (socketRef.current) {
-            console.log(
-                "Socket already initialized, skipping:",
-                socketRef.current.id
-            );
-            return;
-        }
-        console.log("Initializing Socket.IO for user:", currentUser.uid);
-        socketRef.current = io("http://localhost:4000", {
-            autoConnect: true,
-            reconnection: false,
-        });
-        socketRef.current.on("connect", () => {
-            console.log(
-                "Socket connected:",
-                currentUser.uid,
-                socketRef.current.id
-            );
-            socketRef.current.emit("auth", {
-                firebaseUid: currentUser.uid,
-                username:
-                    currentUser.displayName ||
-                    (currentUser.isAnonymous ? "Guest" : "User"),
-            });
-        });
-        socketRef.current.on("error", (message) => {
-            console.error("Socket error:", message);
-        });
-        socketRef.current.on("connect_error", (error) => {
-            console.error("Socket connect error:", error.message);
-        });
-        socketRef.current.on("disconnect", (reason) => {
-            console.log(
-                "Socket disconnected:",
-                socketRef.current.id,
-                "reason:",
-                reason
-            );
-        });
-    };
-
     const cleanupSocket = () => {
         if (socketRef.current) {
-            console.log("Cleaning up socket:", socketRef.current.id);
+            console.log("Cleaning up socket:", socketRef.current);
             socketRef.current.disconnect();
             socketRef.current = null;
+            setSocket(null);
         }
     };
 
@@ -114,6 +125,7 @@ export default function LoginGate({ children }) {
                 result.user.uid,
                 result.user.isAnonymous
             );
+            setUser(result.user); // Socket handled by onAuthStateChanged
         } catch (err) {
             console.error("Guest login failed:", err);
             setLoginError(`Guest login failed: ${err.message}`);
@@ -187,5 +199,9 @@ export default function LoginGate({ children }) {
         );
     }
 
-    return children({ user, socket: socketRef.current, logout: handleLogout });
+    return (
+        <SocketContext.Provider value={socket}>
+            {children({ user, socket, logout: handleLogout })}
+        </SocketContext.Provider>
+    );
 }

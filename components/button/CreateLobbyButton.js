@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useRouter } from "next/router";
+import { SocketContext } from "../../lib/socket";
 
-export default function CreateLobbyButton({ username, socket, logout }) {
+export default function CreateLobbyButton({ username, logout }) {
     const [roomId, setRoomId] = useState("");
     const [error, setError] = useState(null);
     const router = useRouter();
+    const socket = useContext(SocketContext);
 
     const generateRoomId = () => {
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

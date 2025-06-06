@@ -4,7 +4,7 @@ import CreateLobbyButton from "../components/button/CreateLobbyButton";
 export default function Home() {
     return (
         <LoginGate>
-            {({ user, socket, logout }) => (
+            {({ user, logout }) => (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
                     <h1 className="text-4xl font-bold text-blue-600">
                         3Doodle
@@ -14,7 +14,6 @@ export default function Home() {
                             user.displayName ||
                             (user.isAnonymous ? "Guest" : "User")
                         }
-                        socket={socket}
                         logout={logout}
                     />
                 </div>

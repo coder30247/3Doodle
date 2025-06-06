@@ -23,7 +23,7 @@ export default function Login() {
                 password
             );
             console.log("Email login successful:", result.user.uid);
-            router.push("/"); // Redirect to home
+            router.push("/"); // Socket handled by LoginGate.js
         } catch (err) {
             console.error("Email login failed:", err);
             setError(err.message);
