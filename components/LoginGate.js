@@ -44,6 +44,7 @@ const initializeSocket = (currentUser, socketRef) => {
             "reason:",
             reason
         );
+        socketRef.current = null;
     });
     return socketRef.current;
 };
@@ -76,7 +77,6 @@ export default function LoginGate({ children }) {
                     if (!user || user.uid !== currentUser.uid) {
                         setUser(currentUser);
                         if (!socketRef.current) {
-                            // Only initialize if no socket exists
                             const newSocket = initializeSocket(
                                 currentUser,
                                 socketRef
@@ -100,13 +100,12 @@ export default function LoginGate({ children }) {
         return () => {
             console.log("Cleaning up auth listener");
             unsubscribe();
-            cleanupSocket();
         };
     }, []);
 
     const cleanupSocket = () => {
         if (socketRef.current) {
-            console.log("Cleaning up socket:", socketRef.current);
+            console.log("Cleaning up socket:", socketRef.current.id);
             socketRef.current.disconnect();
             socketRef.current = null;
             setSocket(null);
@@ -125,7 +124,7 @@ export default function LoginGate({ children }) {
                 result.user.uid,
                 result.user.isAnonymous
             );
-            setUser(result.user); // Socket handled by onAuthStateChanged
+            setUser(result.user);
         } catch (err) {
             console.error("Guest login failed:", err);
             setLoginError(`Guest login failed: ${err.message}`);
@@ -140,9 +139,9 @@ export default function LoginGate({ children }) {
         setLoginError(null);
         try {
             console.log("Attempting logout");
+            cleanupSocket();
             await signOut(auth);
             console.log("User logged out");
-            cleanupSocket();
             setUser(null);
         } catch (err) {
             console.error("Logout failed:", err);
