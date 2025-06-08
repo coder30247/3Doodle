@@ -1,178 +1,155 @@
-const {
-    Player,
-    activeLobbies,
-    cleanupLobby,
-} = require("./models/Lobby_Manager");
+import Lobby from "./models/Lobby.js";
+import Player from "./models/Player.js";
+import Lobby_Manager from "./managers/Lobby_Manager.js";
+import Player_Manager from "./managers/Player_Manager.js";
 
-function socketHandler(io) {
-    const userSockets = new Map(); // Track sockets by Firebase UID
+export function socket_handler(io) {
+    const user_sockets = new Map(); // track sockets by firebase uid
+    const lobby_manager = new Lobby_Manager();
+    const player_manager = new Player_Manager();
+
+    function cleanup_lobby(lobby_id) {
+        const lobby = lobby_manager.get_lobby(lobby_id);
+        if (lobby && lobby.is_empty()) {
+            lobby_manager.delete_lobby(lobby_id);
+            console.log(`🗑️ cleaned up empty lobby ${lobby_id}`);
+        }
+    }
 
     io.on("connection", (socket) => {
-        const userAgent = socket.handshake.headers["user-agent"] || "";
-        if (userAgent.includes("node-XMLHttpRequest")) {
-            console.log(`🚫 Blocking non-browser connection: ${socket.id}`);
+        const user_agent = socket.handshake.headers["user-agent"] || "";
+        if (user_agent.includes("node-XMLHttpRequest")) {
+            console.log(`🚫 blocking non-browser connection: ${socket.id}`);
             socket.disconnect(true);
             return;
         }
 
         console.log(
-            "✅ New client connected:",
-            socket.id,
+            `✅ new client connected: ${socket.id}`,
             socket.handshake.headers
         );
 
-        const authTimeout = setTimeout(() => {
+        const auth_timeout = setTimeout(() => {
             if (!socket.firebaseUid) {
-                console.log(`🕒 No auth received, disconnecting: ${socket.id}`);
+                console.log(`🕒 no auth received, disconnecting: ${socket.id}`);
                 socket.disconnect(true);
             }
         }, 5000);
 
         socket.on("auth", ({ firebaseUid, username }) => {
-            clearTimeout(authTimeout);
-            if (!firebaseUid || !username) {
-                socket.emit("error", "Invalid auth data");
-                socket.disconnect(true);
-                return;
-            }
+            clearTimeout(auth_timeout);
 
-            // Disconnect existing socket for this UID, if any
-            const existingSocket = userSockets.get(firebaseUid);
-            if (existingSocket) {
+            // disconnect existing socket for this uid, if any
+            const existing_socket = user_sockets.get(firebaseUid);
+            if (existing_socket) {
                 console.log(
-                    `🔄 Replacing socket for user: ${firebaseUid}, old: ${existingSocket.id}, new: ${socket.id}`
+                    `🔄 replacing socket for user: ${firebaseUid}, old: ${existing_socket.id}, new: ${socket.id}`
                 );
-                existingSocket.disconnect(true);
+                existing_socket.disconnect(true);
             }
 
             socket.firebaseUid = firebaseUid;
             socket.username = username;
-            userSockets.set(firebaseUid, socket);
+            user_sockets.set(firebaseUid, socket);
             console.log(
-                `🔐 User authenticated: ${firebaseUid} (${username}) with socket ${socket.id}`
+                `🔐 user authenticated: ${firebaseUid} (${username}) with socket ${socket.id}`
             );
 
             socket.on(
-                "create-lobby",
-                ({ lobbyId, username, maxPlayers = 4 }) => {
-                    if (!lobbyId || !username || !socket.firebaseUid) {
-                        socket.emit(
-                            "error",
-                            "Missing lobbyId, username, or not authenticated"
-                        );
-                        return;
-                    }
-
-                    if (activeLobbies.has(lobbyId)) {
+                "create_lobby",
+                ({ lobby_id, username, max_players = 4 }) => {
+                    // check for duplicate lobby
+                    if (lobby_manager.lobby_exists(lobby_id)) {
                         socket.emit("error", "Lobby already exists");
                         return;
                     }
 
-                    const newPlayer = new Player(
-                        socket.firebaseUid,
-                        username,
-                        socket.id
-                    );
-                    newPlayer.isHost = true;
+                    // create host player
+                    const new_player = player_manager.add_player({
+                        id: socket.firebaseUid,
+                        name: username,
+                        socket_id: socket.id,
+                        is_host: true,
+                    });
 
-                    const lobby = {
-                        id: lobbyId,
-                        players: new Map([[socket.firebaseUid, newPlayer]]),
-                        maxPlayers,
-                        createdAt: new Date(),
-                        gameState: "lobby",
-                    };
+                    // create lobby
+                    const new_lobby = lobby_manager.create_lobby({
+                        host: new_player,
+                        max_players,
+                        name: `lobby-${lobby_id}`,
+                    });
 
-                    activeLobbies.set(lobbyId, lobby);
-                    socket.join(lobbyId);
+                    // join socket room
+                    socket.join(lobby_id);
                     console.log(
-                        `🚪 ${username} (${socket.firebaseUid}) created lobby ${lobbyId}`
+                        `🚪 ${username} (${socket.firebaseUid}) created lobby ${lobby_id}`
                     );
 
-                    socket.emit("lobby-created", {
-                        lobbyId,
+                    // confirm creation to creator
+                    socket.emit("lobby_created", {
+                        lobby_id,
                         firebaseUid: socket.firebaseUid,
                     });
-                    io.to(lobbyId).emit(
-                        "update-players",
-                        Array.from(lobby.players.values())
+
+                    // notify all clients in room of updated player list
+                    io.to(lobby_id).emit(
+                        "update_players",
+                        new_lobby.get_player_list()
                     );
                 }
             );
 
-            socket.on("join-lobby", ({ lobbyId, username }) => {
-                if (!lobbyId || !username || !socket.firebaseUid) {
-                    socket.emit(
-                        "error",
-                        "Missing lobbyId, username, or not authenticated"
-                    );
-                    return;
-                }
-
-                if (!activeLobbies.has(lobbyId)) {
+            socket.on("join_lobby", ({ lobby_id, username }) => {
+                const lobby = lobby_manager.get_lobby(lobby_id);
+                if (!lobby) {
                     socket.emit("error", "Lobby does not exist");
                     return;
                 }
 
-                const lobby = activeLobbies.get(lobbyId);
-                if (lobby.players.size >= lobby.maxPlayers) {
+                if (lobby.get_player_list().length >= lobby.max_players) {
                     socket.emit("error", "Lobby is full");
                     return;
                 }
 
-                const player = new Player(
-                    socket.firebaseUid,
-                    username,
-                    socket.id
-                );
-                player.isHost = false;
+                const player = player_manager.add_player({
+                    id: socket.firebaseUid,
+                    name: username,
+                    socket_id: socket.id,
+                    is_host: false,
+                });
 
-                lobby.players.set(socket.firebaseUid, player);
-                socket.join(lobbyId);
+                lobby_manager.add_player_to_lobby(lobby_id, player);
+                socket.join(lobby_id);
                 console.log(
-                    `➕ ${username} (${socket.firebaseUid}) joined lobby ${lobbyId}`
+                    `➕ ${username} (${socket.firebaseUid}) joined lobby ${lobby_id}`
                 );
 
-                socket.emit("joined-success", {
-                    lobbyId,
+                socket.emit("joined_success", {
+                    lobby_id,
                     firebaseUid: socket.firebaseUid,
                 });
-                io.to(lobbyId).emit(
-                    "update-players",
-                    Array.from(lobby.players.values())
-                );
+                io.to(lobby_id).emit("update_players", lobby.get_player_list());
             });
         });
 
         socket.on("disconnect", (reason) => {
             console.log(
-                `❌ Client disconnected: ${socket.id} (${
+                `❌ client disconnected: ${socket.id} (${
                     socket.firebaseUid || "unknown"
                 })`,
                 `reason: ${reason}`
             );
             if (socket.firebaseUid) {
-                userSockets.delete(socket.firebaseUid);
-                for (const [lobbyId, lobby] of activeLobbies.entries()) {
-                    if (lobby.players.has(socket.firebaseUid)) {
-                        const leftPlayer = lobby.players.get(
-                            socket.firebaseUid
-                        );
-                        lobby.players.delete(socket.firebaseUid);
-                        console.log(
-                            `❌ ${leftPlayer.name} (${leftPlayer.id}) left ${lobbyId}`
-                        );
-                        io.to(lobbyId).emit(
-                            "update-players",
-                            Array.from(lobby.players.values())
-                        );
-                        cleanupLobby(lobbyId, activeLobbies);
-                        break;
-                    }
+                user_sockets.delete(socket.firebaseUid);
+                player_manager.remove_player(socket.firebaseUid);
+                lobby_manager.remove_player_from_lobbies({
+                    id: socket.firebaseUid,
+                });
+                // cleanup empty lobbies
+                for (const lobby of lobby_manager.get_all_lobbies()) {
+                    cleanup_lobby(lobby.id);
                 }
             }
         });
     });
 }
-
-module.exports = socketHandler;

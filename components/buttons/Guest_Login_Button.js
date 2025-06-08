@@ -1,31 +1,33 @@
 import { signInAnonymously } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth } from "../../lib/Firebase.js";
 
-export default function Guest_Login_Button({ loading,setLoading, setLoginError }) {
-    const handleGuestLogin = async () => {
+export default function Guest_Login_Button({
+    loading,
+    set_loading,
+    set_login_error,
+}) {
+    const handle_guest_login = async () => {
         if (loading) return;
-        setLoading(true);
-        setLoginError(null);
+        set_loading(true);
+        set_login_error(null);
         try {
             console.log("Attempting guest login");
             const result = await signInAnonymously(auth);
             console.log(
-                "Guest login successful:",
-                result.user.uid,
-                result.user.isAnonymous
+                `Guest login successful: ${result.user.uid}, isAnonymous: ${result.user.isAnonymous}`
             );
         } catch (err) {
-            console.error("Guest login failed:", err);
-            setLoginError(`Guest login failed: ${err.message}`);
+            console.error(`Guest login failed: ${err}`);
+            set_login_error(`Guest login failed: ${err.message}`);
         } finally {
-            setLoading(false);
+            set_loading(false);
         }
     };
 
     return (
         <button
             className="px-4 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600"
-            onClick={handleGuestLogin}
+            onClick={handle_guest_login}
             disabled={loading}
         >
             {loading ? "Logging in..." : "Play as Guest"}

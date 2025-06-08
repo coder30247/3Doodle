@@ -1,12 +1,12 @@
-import { UserProvider } from "../context/UserContext";
-import { SocketContext } from "../lib/socket";
+import { User_Provider } from "../context/User_Context.js";
+import { Socket_Context } from "../lib/Socket.js";
 
-export default function App({ Component, pageProps }) {
+export default function App({ Component, page_props }) {
     return (
-        <UserProvider>
-            <SocketContext.Provider value={null}>
-                <Component {...pageProps} />
-            </SocketContext.Provider>
-        </UserProvider>
+        <User_Provider>
+            <Socket_Context.Provider value={null}>
+                <Component {...page_props} />
+            </Socket_Context.Provider>
+        </User_Provider>
     );
 }

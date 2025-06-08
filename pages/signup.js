@@ -1,34 +1,34 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth } from "../lib/Firebase.js";
 
 export default function Signup() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [email, set_email] = useState("");
+    const [password, set_password] = useState("");
+    const [loading, set_loading] = useState(false);
+    const [error, set_error] = useState(null);
     const router = useRouter();
 
-    const handleSignup = async (e) => {
+    const handle_signup = async (e) => {
         e.preventDefault();
         if (loading) return;
-        setLoading(true);
-        setError(null);
+        set_loading(true);
+        set_error(null);
         try {
-            console.log("Attempting signup with email:", email);
+            console.log(`Attempting signup with email: ${email}`);
             const result = await createUserWithEmailAndPassword(
                 auth,
                 email,
                 password
             );
-            console.log("Signup successful:", result.user.uid);
-            router.push("/"); // Redirect to home
+            console.log(`Signup successful: ${result.user.uid}`);
+            router.push("/"); // redirect to home
         } catch (err) {
-            console.error("Signup failed:", err);
-            setError(err.message);
+            console.error(`Signup failed: ${err}`);
+            set_error(err.message);
         } finally {
-            setLoading(false);
+            set_loading(false);
         }
     };
 
@@ -36,13 +36,13 @@ export default function Signup() {
         <div className="flex flex-col items-center justify-center min-h-screen space-y-6 bg-gray-100">
             <h1 className="text-4xl font-bold text-blue-600">Sign Up</h1>
             <form
-                onSubmit={handleSignup}
+                onSubmit={handle_signup}
                 className="flex flex-col space-y-4 w-80"
             >
                 <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => set_email(e.target.value)}
                     placeholder="Email"
                     className="px-4 py-2 border rounded-md"
                     disabled={loading}
@@ -50,7 +50,7 @@ export default function Signup() {
                 <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => set_password(e.target.value)}
                     placeholder="Password"
                     className="px-4 py-2 border rounded-md"
                     disabled={loading}

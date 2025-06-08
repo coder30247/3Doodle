@@ -1,102 +1,99 @@
 import { useState, useEffect, useRef } from "react";
-import { auth } from "../lib/firebase";
+import { auth } from "../lib/Firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { io } from "socket.io-client";
-import { SocketContext } from "../lib/socket";
+import { Socket_Context } from "../lib/Socket.js";
+import { Auth_Context } from "../context/Auth_Context.js";
+import Login_Button from "./buttons/Login_Button.js";
+import Signup_Button from "./buttons/Signup_Button.js";
+import Guest_Login_Button from "./buttons/Guest_Login_Button.js";
 
-import { Auth_Context } from "../lib/Auth_Context";
-import Login_Button from "./buttons/Login_Button";
-import Signup_Button from "./buttons/Signup_Button";
-import Guest_Login_Button from "./buttons/Guest_Login_Button";
-
-const initializeSocket = (currentUser, socketRef) => {
-    if (!currentUser) {
+const initialize_socket = (current_user, socket_ref) => {
+    if (!current_user) {
         console.error("Attempted to initialize socket without user");
         return null;
     }
-    if (socketRef.current) {
+    if (socket_ref.current) {
         console.log(
-            "Socket already initialized, skipping:",
-            socketRef.current.id
+            `Socket already initialized, skipping: ${socket_ref.current.id}`
         );
-        return socketRef.current;
+        return socket_ref.current;
     }
-    console.log("Initializing Socket.IO for user:", currentUser.uid);
-    socketRef.current = io("http://localhost:4000", {
+    console.log(`Initializing Socket.IO for user: ${current_user.uid}`);
+    socket_ref.current = io("http://localhost:4000", {
         autoConnect: true,
         reconnection: false,
     });
-    socketRef.current.on("connect", () => {
-        console.log("Socket connected:", currentUser.uid, socketRef.current.id);
-        socketRef.current.emit("auth", {
-            firebaseUid: currentUser.uid,
+    socket_ref.current.on("connect", () => {
+        console.log(
+            `Socket connected: ${current_user.uid}, ${socket_ref.current.id}`
+        );
+        socket_ref.current.emit("auth", {
+            firebaseUid: current_user.uid,
             username:
-                currentUser.displayName ||
-                (currentUser.isAnonymous ? "Guest" : "User"),
+                current_user.displayName ||
+                (current_user.isAnonymous ? "Guest" : "User"),
         });
     });
-    socketRef.current.on("error", (message) => {
-        console.error("Socket error:", message);
+    socket_ref.current.on("error", (message) => {
+        console.error(`Socket error: ${message}`);
     });
-    socketRef.current.on("connect_error", (error) => {
-        console.error("Socket connect error:", error.message);
+    socket_ref.current.on("connect_error", (error) => {
+        console.error(`Socket connect error: ${error.message}`);
     });
-    socketRef.current.on("disconnect", (reason) => {
+    socket_ref.current.on("disconnect", (reason) => {
         console.log(
-            "Socket disconnected:",
-            socketRef.current?.id,
-            "reason:",
-            reason
+            `Socket disconnected: ${socket_ref.current?.id}, reason: ${reason}`
         );
-        socketRef.current = null;
+        socket_ref.current = null;
     });
-    return socketRef.current;
+    return socket_ref.current;
 };
 
-export { initializeSocket };
+export { initialize_socket };
 
 export default function Login_Gate({ children }) {
-    const [user, setUser] = useState(null);
-    const [socket, setSocket] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [loginError, setLoginError] = useState(null);
-    const socketRef = useRef(null);
+    const [user, set_user] = useState(null);
+    const [socket, set_socket] = useState(null);
+    const [loading, set_loading] = useState(true);
+    const [login_error, set_login_error] = useState(null);
+    const socket_ref = useRef(null);
 
     useEffect(() => {
         console.log("Setting up auth listener");
         const unsubscribe = onAuthStateChanged(
             auth,
-            (currentUser) => {
+            (current_user) => {
                 console.log(
-                    "onAuthStateChanged fired:",
-                    currentUser
+                    `onAuthStateChanged fired:`,
+                    current_user
                         ? {
-                              uid: currentUser.uid,
-                              isAnonymous: currentUser.isAnonymous,
+                              uid: current_user.uid,
+                              isAnonymous: current_user.isAnonymous,
                           }
                         : null
                 );
-                if (currentUser) {
-                    if (!user || user.uid !== currentUser.uid) {
-                        setUser(currentUser);
-                        if (!socketRef.current) {
-                            const newSocket = initializeSocket(
-                                currentUser,
-                                socketRef
+                if (current_user) {
+                    if (!user || user.uid !== current_user.uid) {
+                        set_user(current_user);
+                        if (!socket_ref.current) {
+                            const new_socket = initialize_socket(
+                                current_user,
+                                socket_ref
                             );
-                            setSocket(newSocket);
+                            set_socket(new_socket);
                         }
                     }
                 } else {
-                    setUser(null);
-                    cleanupSocket();
+                    set_user(null);
+                    cleanup_socket();
                 }
-                setLoading(false);
+                set_loading(false);
             },
             (error) => {
-                console.error("onAuthStateChanged error:", error);
-                setLoading(false);
-                setLoginError(error.message);
+                console.error(`onAuthStateChanged error: ${error}`);
+                set_loading(false);
+                set_login_error(error.message);
             }
         );
 
@@ -106,12 +103,12 @@ export default function Login_Gate({ children }) {
         };
     }, []);
 
-    const cleanupSocket = () => {
-        if (socketRef.current) {
-            console.log("Cleaning up socket:", socketRef.current.id);
-            socketRef.current.disconnect();
-            socketRef.current = null;
-            setSocket(null);
+    const cleanup_socket = () => {
+        if (socket_ref.current) {
+            console.log(`Cleaning up socket: ${socket_ref.current.id}`);
+            socket_ref.current.disconnect();
+            socket_ref.current = null;
+            set_socket(null);
         }
     };
 
@@ -123,10 +120,10 @@ export default function Login_Gate({ children }) {
         );
     }
 
-    if (loginError) {
+    if (login_error) {
         return (
-            <div className="flex items-center justify-center min-h-screen text-xl text-red-700">
-                Error: {loginError}
+            <div className="flex items-center justify-center min-h-screen9724 text-xl text-red-700">
+                Error: {login_error}
             </div>
         );
     }
@@ -145,8 +142,8 @@ export default function Login_Gate({ children }) {
                     <Signup_Button />
                     <Guest_Login_Button
                         loading={loading}
-                        setLoginError={setLoginError}
-                        setLoading={setLoading}
+                        set_login_error={set_login_error}
+                        set_loading={set_loading}
                     />
                 </div>
             </div>
@@ -155,9 +152,9 @@ export default function Login_Gate({ children }) {
 
     return (
         <Auth_Context.Provider value={{ user, socket }}>
-            <SocketContext.Provider value={socket}>
+            <Socket_Context.Provider value={socket}>
                 {children}
-            </SocketContext.Provider>
+            </Socket_Context.Provider>
         </Auth_Context.Provider>
     );
 }
