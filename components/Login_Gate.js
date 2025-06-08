@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
 import { auth } from "../lib/firebase";
-import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { io } from "socket.io-client";
 import { SocketContext } from "../lib/socket";
+
+import { Auth_Context } from "../lib/Auth_Context";
+import Login_Button from "./buttons/Login_Button";
+import Signup_Button from "./buttons/Signup_Button";
+import Guest_Login_Button from "./buttons/Guest_Login_Button";
 
 const initializeSocket = (currentUser, socketRef) => {
     if (!currentUser) {
@@ -51,12 +55,11 @@ const initializeSocket = (currentUser, socketRef) => {
 
 export { initializeSocket };
 
-export default function LoginGate({ children }) {
+export default function Login_Gate({ children }) {
     const [user, setUser] = useState(null);
     const [socket, setSocket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loginError, setLoginError] = useState(null);
-    const router = useRouter();
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -112,45 +115,6 @@ export default function LoginGate({ children }) {
         }
     };
 
-    const handleGuestLogin = async () => {
-        if (loading) return;
-        setLoading(true);
-        setLoginError(null);
-        try {
-            console.log("Attempting guest login");
-            const result = await signInAnonymously(auth);
-            console.log(
-                "Guest login successful:",
-                result.user.uid,
-                result.user.isAnonymous
-            );
-            setUser(result.user);
-        } catch (err) {
-            console.error("Guest login failed:", err);
-            setLoginError(`Guest login failed: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = async () => {
-        if (loading) return;
-        setLoading(true);
-        setLoginError(null);
-        try {
-            console.log("Attempting logout");
-            cleanupSocket();
-            await signOut(auth);
-            console.log("User logged out");
-            setUser(null);
-        } catch (err) {
-            console.error("Logout failed:", err);
-            setLoginError(`Logout failed: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-xl text-gray-700">
@@ -174,33 +138,26 @@ export default function LoginGate({ children }) {
                     Welcome to 3Doodle
                 </h1>
                 <div className="flex flex-col space-y-4 w-64">
-                    <button
-                        className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
-                        onClick={() => router.push("/signup")}
-                    >
-                        Sign Up
-                    </button>
-                    <button
-                        className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600"
-                        onClick={() => router.push("/login")}
-                    >
-                        Log In
-                    </button>
-                    <button
-                        className="px-4 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600"
-                        onClick={handleGuestLogin}
-                        disabled={loading}
-                    >
-                        {loading ? "Logging in..." : "Play as Guest"}
-                    </button>
+                    <p className="text-lg text-gray-700">
+                        Please log in to continue
+                    </p>
+                    <Login_Button />
+                    <Signup_Button />
+                    <Guest_Login_Button
+                        loading={loading}
+                        setLoginError={setLoginError}
+                        setLoading={setLoading}
+                    />
                 </div>
             </div>
         );
     }
 
     return (
-        <SocketContext.Provider value={socket}>
-            {children({ user, socket, logout: handleLogout })}
-        </SocketContext.Provider>
+        <Auth_Context.Provider value={{ user, socket }}>
+            <SocketContext.Provider value={socket}>
+                {children}
+            </SocketContext.Provider>
+        </Auth_Context.Provider>
     );
 }
