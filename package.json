@@ -18,7 +18,8 @@
         "socket.io": "^4.8.1",
         "socket.io-client": "^4.8.1",
         "three": "^0.176.0",
-        "uuid": "^11.1.0"
+        "uuid": "^11.1.0",
+        "zustand": "^5.0.5"
     },
     "devDependencies": {
         "autoprefixer": "10.4.15",

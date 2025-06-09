@@ -1,11 +1,22 @@
-import { useState, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Socket_Context } from "../../lib/Socket.js";
+import Socket_Store from "../../states/Socket_Store.js";
+import User_Store from "../../states/User_Store.js";
+import Lobby_Store from "../../states/Lobby_Store.js";
 
-export default function Create_Lobby_Button({ username }) {
+export default function Create_Lobby_Button() {
     const [error, set_error] = useState(null);
     const router = useRouter();
-    const socket = useContext(Socket_Context);
+    const { socket } = Socket_Store();
+    const { username } = User_Store();
+    const { set_lobby_id } = Lobby_Store();
+
+    useEffect(() => {
+        console.log("Create_Lobby_Button state:", {
+            username,
+            socket: !!socket,
+        });
+    }, [username, socket]);
 
     const generate_id = () => {
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -32,12 +43,12 @@ export default function Create_Lobby_Button({ username }) {
         );
         socket.emit("create_lobby", { lobby_id, username });
 
-        socket.on("lobby_created", ({ lobby_id, firebase_uid }) => {
-            console.log(
-                `Lobby created: ${lobby_id}, for user: ${firebase_uid}`
-            );
+        socket.on("lobby_created", ({ lobby_id, firebaseUid }) => {
+            console.log(`Lobby created: ${lobby_id}, for user: ${firebaseUid}`);
+            set_lobby_id(lobby_id);
             router.push(`/lobby/${lobby_id}`);
         });
+
         socket.on("error", (message) => {
             console.error(`Lobby creation error: ${message}`);
             set_error(message);

@@ -1,14 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { auth } from "../lib/Firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { io } from "socket.io-client";
-import { Socket_Context } from "../lib/Socket.js";
-import { Auth_Context } from "../context/Auth_Context.js";
+
+import Auth_Store from "../states/Auth_Store.js";
+import Socket_Store from "../states/Socket_Store.js";
+import User_Store from "../states/User_Store.js";
 import Login_Button from "./buttons/Login_Button.js";
 import Signup_Button from "./buttons/Signup_Button.js";
 import Guest_Login_Button from "./buttons/Guest_Login_Button.js";
 
 const initialize_socket = (current_user, socket_ref) => {
+    const { set_socket, set_connected } = Socket_Store.getState();
+    const { set_username } = User_Store.getState();
+
     if (!current_user) {
         console.error("Attempted to initialize socket without user");
         return null;
@@ -28,12 +33,15 @@ const initialize_socket = (current_user, socket_ref) => {
         console.log(
             `Socket connected: ${current_user.uid}, ${socket_ref.current.id}`
         );
+        const username =
+            current_user.displayName ||
+            (current_user.isAnonymous ? "Guest" : "User");
         socket_ref.current.emit("auth", {
             firebaseUid: current_user.uid,
-            username:
-                current_user.displayName ||
-                (current_user.isAnonymous ? "Guest" : "User"),
+            username,
         });
+        set_username(username); // Set username in User_Store
+        set_connected(true);
     });
     socket_ref.current.on("error", (message) => {
         console.error(`Socket error: ${message}`);
@@ -46,15 +54,20 @@ const initialize_socket = (current_user, socket_ref) => {
             `Socket disconnected: ${socket_ref.current?.id}, reason: ${reason}`
         );
         socket_ref.current = null;
+        set_socket(null);
+        set_connected(false);
     });
+    set_socket(socket_ref.current);
     return socket_ref.current;
 };
 
 export { initialize_socket };
 
 export default function Login_Gate({ children }) {
-    const [user, set_user] = useState(null);
-    const [socket, set_socket] = useState(null);
+    const { firebase_uid, set_firebase_uid, set_is_authenticated, reset_auth } =
+        Auth_Store();
+    const { reset_socket } = Socket_Store();
+    const { reset_user } = User_Store();
     const [loading, set_loading] = useState(true);
     const [login_error, set_login_error] = useState(null);
     const socket_ref = useRef(null);
@@ -74,18 +87,16 @@ export default function Login_Gate({ children }) {
                         : null
                 );
                 if (current_user) {
-                    if (!user || user.uid !== current_user.uid) {
-                        set_user(current_user);
+                    if (!firebase_uid || firebase_uid !== current_user.uid) {
+                        set_firebase_uid(current_user.uid);
+                        set_is_authenticated(true);
                         if (!socket_ref.current) {
-                            const new_socket = initialize_socket(
-                                current_user,
-                                socket_ref
-                            );
-                            set_socket(new_socket);
+                            initialize_socket(current_user, socket_ref);
                         }
                     }
                 } else {
-                    set_user(null);
+                    reset_auth();
+                    reset_user(); // Reset User_Store on logout
                     cleanup_socket();
                 }
                 set_loading(false);
@@ -101,14 +112,20 @@ export default function Login_Gate({ children }) {
             console.log("Cleaning up auth listener");
             unsubscribe();
         };
-    }, []);
+    }, [
+        firebase_uid,
+        set_firebase_uid,
+        set_is_authenticated,
+        reset_auth,
+        reset_user,
+    ]);
 
     const cleanup_socket = () => {
         if (socket_ref.current) {
             console.log(`Cleaning up socket: ${socket_ref.current.id}`);
             socket_ref.current.disconnect();
             socket_ref.current = null;
-            set_socket(null);
+            reset_socket();
         }
     };
 
@@ -122,13 +139,13 @@ export default function Login_Gate({ children }) {
 
     if (login_error) {
         return (
-            <div className="flex items-center justify-center min-h-screen9724 text-xl text-red-700">
+            <div className="flex items-center justify-center min-h-screen text-xl text-red-700">
                 Error: {login_error}
             </div>
         );
     }
 
-    if (!user) {
+    if (!firebase_uid) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen space-y-6 bg-gray-100">
                 <h1 className="text-4xl font-bold text-blue-600">
@@ -150,11 +167,5 @@ export default function Login_Gate({ children }) {
         );
     }
 
-    return (
-        <Auth_Context.Provider value={{ user, socket }}>
-            <Socket_Context.Provider value={socket}>
-                {children}
-            </Socket_Context.Provider>
-        </Auth_Context.Provider>
-    );
+    return children;
 }

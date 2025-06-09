@@ -91,11 +91,11 @@ export function socket_handler(io) {
                         firebaseUid: socket.firebaseUid,
                     });
 
-                    // notify all clients in room of updated player list
-                    io.to(lobby_id).emit(
-                        "update_players",
-                        new_lobby.get_player_list()
-                    );
+                    // notify all clients in room of updated lobby state
+                    io.to(lobby_id).emit("update_players", {
+                        host: new_lobby.host_id,
+                        players: new_lobby.get_player_list(),
+                    });
                 }
             );
 
@@ -128,7 +128,34 @@ export function socket_handler(io) {
                     lobby_id,
                     firebaseUid: socket.firebaseUid,
                 });
-                io.to(lobby_id).emit("update_players", lobby.get_player_list());
+
+                // notify all clients in room of updated lobby state
+                io.to(lobby_id).emit("update_players", {
+                    host: lobby.host_id,
+                    players: lobby.get_player_list(),
+                });
+            });
+
+            socket.on("leave_lobby", ({ lobby_id }) => {
+                if (!lobby_id || !lobby_manager.lobby_exists(lobby_id)) {
+                    socket.emit("error", "Lobby does not exist");
+                    return;
+                }
+                lobby_manager.remove_player_from_lobbies({
+                    id: socket.firebaseUid,
+                });
+                socket.leave(lobby_id);
+                console.log(
+                    `🚪 ${socket.username} (${socket.firebaseUid}) left lobby ${lobby_id}`
+                );
+                cleanup_lobby(lobby_id);
+                const lobby = lobby_manager.get_lobby(lobby_id);
+                if (lobby) {
+                    io.to(lobby_id).emit("update_players", {
+                        host: lobby.host_id,
+                        players: lobby.get_player_list(),
+                    });
+                }
             });
         });
 
@@ -145,9 +172,14 @@ export function socket_handler(io) {
                 lobby_manager.remove_player_from_lobbies({
                     id: socket.firebaseUid,
                 });
-                // cleanup empty lobbies
                 for (const lobby of lobby_manager.get_all_lobbies()) {
                     cleanup_lobby(lobby.id);
+                    if (lobby) {
+                        io.to(lobby.id).emit("update_players", {
+                            host: lobby.host_id,
+                            players: lobby.get_player_list(),
+                        });
+                    }
                 }
             }
         });
