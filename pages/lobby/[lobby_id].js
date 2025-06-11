@@ -13,15 +13,12 @@ export default function Lobby() {
         if (!socket || !lobby_id) return;
         console.log(`Joining lobby: ${lobby_id}`);
 
-        socket.on("update_players", ({ players }) => {
+        socket.on("update_lobby", ({ host_id, players }) => {
+            console.log(`Host updated: ${host_id}`);
             console.log(
                 `Received lobby update: players=${JSON.stringify(players)}`
             );
             set_players(players);
-        });
-
-        socket.on("update_host", ({ host_id }) => {
-            console.log(`Host updated: ${host_id}`);
             set_host_id(host_id);
         });
 
@@ -46,7 +43,10 @@ export default function Lobby() {
         if (socket && lobby_id) {
             socket.emit("leave_lobby", { lobby_id });
         }
-        router.push("/");
+        socket.on("left_lobby", () => {
+            console.log(`Left lobby: ${lobby_id}`);
+            router.push("/");
+        });
     };
 
     return (

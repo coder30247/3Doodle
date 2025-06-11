@@ -1,9 +1,9 @@
 export default class Player {
-    constructor({ id, name, socket_id, is_host = false }) {
+    constructor({ id, name, socket_id }) {
         this.id = id; // firebase uid
-        this.name = name.trim(); // display name
-        this.socket_id = socket_id; // current socket id
-        this.is_ready = false; // ready for game start
+        this.name = name.trim();
+        this.socket_id = socket_id;
+        this.is_ready = false;
     }
 
     mark_ready() {
