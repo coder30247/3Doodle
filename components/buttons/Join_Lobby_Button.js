@@ -17,7 +17,7 @@ export default function Join_Lobby_Button() {
                 lobby_id: lobby_id_input,
                 username,
             });
-            socket.on("joined_success", ({ lobby_id }) => {
+            socket.on("joined_lobby", ({ lobby_id }) => {
                 set_lobby_id(lobby_id);
                 router.push(`/lobby/${lobby_id}`);
             });

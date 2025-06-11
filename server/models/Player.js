@@ -4,7 +4,6 @@ export default class Player {
         this.name = name.trim(); // display name
         this.socket_id = socket_id; // current socket id
         this.is_ready = false; // ready for game start
-        this.is_host = !!is_host; // host status
     }
 
     mark_ready() {
@@ -17,13 +16,5 @@ export default class Player {
 
     update_socket_id(new_socket_id) {
         this.socket_id = new_socket_id;
-    }
-
-    promote_to_host() {
-        this.is_host = true;
-    }
-
-    demote_from_host() {
-        this.is_host = false;
     }
 }

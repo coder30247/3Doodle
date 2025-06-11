@@ -9,7 +9,7 @@ export default function Create_Lobby_Button() {
     const router = useRouter();
     const { socket } = Socket_Store();
     const { username } = User_Store();
-    const { set_lobby_id } = Lobby_Store();
+    const { set_host_id, set_lobby_id, set_players } = Lobby_Store();
 
     useEffect(() => {
         console.log("Create_Lobby_Button state:", {
@@ -46,6 +46,8 @@ export default function Create_Lobby_Button() {
         socket.on("lobby_created", ({ lobby_id, firebaseUid }) => {
             console.log(`Lobby created: ${lobby_id}, for user: ${firebaseUid}`);
             set_lobby_id(lobby_id);
+            set_host_id(firebaseUid); // Set the host ID
+            set_players([{ id: firebaseUid, name: username, is_host: true }]); // Add only the host
             router.push(`/lobby/${lobby_id}`);
         });
 

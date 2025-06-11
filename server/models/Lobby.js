@@ -5,7 +5,6 @@ export default class Lobby {
         this.host_id = host_player.id; // host player id
         this.max_players = max_players; // maximum player limit
         this.players = new Map(); // map of player id to player object
-        this.created_at = new Date(); // creation timestamp
         this.game_state = "lobby"; // state: lobby, in_game, finished
         this.add_player(host_player);
     }
@@ -17,24 +16,24 @@ export default class Lobby {
         if (this.players.has(player.id)) {
             throw new Error("Player already in lobby");
         }
-        player.is_host = player.id === this.host_id;
         this.players.set(player.id, player);
     }
 
     remove_player(player_id) {
         const player = this.players.get(player_id);
-        if (player) {
-            this.players.delete(player_id);
-            if (player.is_host && this.players.size > 0) {
-                this.assign_new_host();
-            }
+        if (!player) {
+            throw new Error(`Player with ID ${player_id} not found in lobby`);
         }
+        this.players.delete(player_id);
+        if (player.id === this.host_id ) {
+            this.assign_new_host();
+        }
+
     }
 
     assign_new_host() {
         const new_host = this.get_player_list()[0];
         if (new_host) {
-            new_host.promote_to_host();
             this.host_id = new_host.id;
         }
     }

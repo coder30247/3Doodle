@@ -13,31 +13,41 @@ export default function Lobby() {
         if (!socket || !lobby_id) return;
         console.log(`Joining lobby: ${lobby_id}`);
 
-        // Receive updated player list
-        socket.on("update_players", ({ host, players }) => {
+        socket.on("update_players", ({ players }) => {
             console.log(
-                `Received lobby update: host=${host}, players=${JSON.stringify(
-                    players
-                )}`
+                `Received lobby update: players=${JSON.stringify(players)}`
             );
-            set_host_id(host);
             set_players(players);
         });
 
-        // Handle errors
+        socket.on("update_host", ({ host_id }) => {
+            console.log(`Host updated: ${host_id}`);
+            set_host_id(host_id);
+        });
+
         socket.on("error", (message) => {
             console.error(`Lobby error: ${message}`);
             router.push("/");
             alert(message);
         });
 
-        // Handle cleanup on unmount
         return () => {
-            socket.emit("leave_lobby", { lobby_id });
-            socket.off("update_players");
-            socket.off("error");
+            if (socket && lobby_id) {
+                socket.emit("leave_lobby", { lobby_id });
+                socket.off("update_players");
+                socket.off("error");
+            }
         };
     }, [socket, lobby_id, set_host_id, set_players, router]);
+
+    // 👇 handle exit click
+    const handle_exit = () => {
+        console.log(`Exiting lobby: ${lobby_id}`);
+        if (socket && lobby_id) {
+            socket.emit("leave_lobby", { lobby_id });
+        }
+        router.push("/");
+    };
 
     return (
         <div className="flex flex-col items-center p-6 min-h-screen bg-gray-100">
@@ -55,7 +65,7 @@ export default function Lobby() {
                 ))}
             </ul>
             <button
-                onClick={() => router.push("/")}
+                onClick={handle_exit}
                 className="mt-4 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600"
             >
                 Exit Lobby

@@ -5,11 +5,11 @@ export default class Player_Manager {
         this.players = new Map(); // map of firebase uid to player instance
     }
 
-    add_player({ id, name, socket_id, is_host = false }) {
+    add_player({ id, name, socket_id }) {
         if (this.players.has(id)) {
             throw new Error(`Player with ID ${id} already exists`);
         }
-        const player = new Player({ id, name, socket_id, is_host });
+        const player = new Player({ id, name, socket_id });
         this.players.set(id, player);
         return player;
     }
@@ -31,13 +31,6 @@ export default class Player_Manager {
 
     get_all_players() {
         return Array.from(this.players.values());
-    }
-
-    promote_to_host(id) {
-        const player = this.get_player(id);
-        if (player) {
-            player.promote_to_host();
-        }
     }
 
     clear_all() {
