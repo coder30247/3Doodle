@@ -218,6 +218,45 @@ export function socket_handler(io) {
                     socket.emit("error", err.message);
                 }
             });
+
+            // 💬 GLOBAL CHAT — Send & Broadcast Messages
+            socket.on("global_chat:send", ({ username, message }) => {
+                const uid = socket.firebaseUid;
+
+                if (!uid || typeof message !== "string" || !message.trim()) {
+                    socket.emit("error", "Invalid global chat message");
+                    return;
+                }
+
+                const player = player_manager.get_player(uid);
+                if (!player) {
+                    socket.emit("error", "Player not found");
+                    return;
+                }
+                player.update_name(username);
+                // 🌐 Broadcast the message to all clients
+                io.emit("global_chat:broadcast", {
+                    message: message.trim(),
+                    sender: player.name,
+                    timestamp: Date.now(),
+                });
+                io.emit(
+                    "global_chat:players",
+                    player_manager.get_all_players().map((player) => ({
+                        id: player.id,
+                        name: player.name,
+                    }))
+                );
+            });
+
+            // 🧑‍🤝‍🧑 Send active player list to this socket
+            socket.emit(
+                "global_chat:players",
+                player_manager.get_all_players().map((player) => ({
+                    id: player.id,
+                    name: player.name,
+                }))
+            );
         });
 
         socket.on("disconnect", () => {
@@ -258,7 +297,9 @@ export function socket_handler(io) {
             }
 
             player_manager.remove_player(firebaseUid);
-            console.log(`🔌 Disconnected: ${firebaseUid} from players list (cleaned up)`);
+            console.log(
+                `🔌 Disconnected: ${firebaseUid} from players list (cleaned up)`
+            );
         });
     });
 }
