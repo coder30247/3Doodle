@@ -4,13 +4,13 @@ import io from "socket.io-client";
 
 let socket;
 
-export default function TanksCanvas({ room_id }) {
+export default function TanksCanvas({ room_id, firebaseUid }) {
   const gameContainerRef = useRef(null);
 
   useEffect(() => {
-    if (!room_id || !gameContainerRef.current) return;
+    if (!room_id || !firebaseUid || !gameContainerRef.current) return;
 
-    socket = io();
+    socket = io("http://localhost:4000");
 
     const config = {
       type: Phaser.AUTO,
@@ -33,10 +33,11 @@ export default function TanksCanvas({ room_id }) {
 
     let game = new Phaser.Game(config);
     let tank, cursors, bullets, lastFired = 0;
-    let otherTanks = {};
+    let otherTanks = {}; // store other players' tanks
 
     function preload() {
       this.load.image("tank", "/assets/tank_blue.png");
+      this.load.image("tank_enemy", "/assets/tank_red.png");
       this.load.image("bullet", "/assets/bullet.png");
     }
 
@@ -44,10 +45,25 @@ export default function TanksCanvas({ room_id }) {
       cursors = this.input.keyboard.createCursorKeys();
       bullets = this.physics.add.group();
 
-      tank = this.physics.add.sprite(400, 300, "tank").setCollideWorldBounds(true);
+      // Create local player's tank
+      tank = this.physics.add.sprite(
+        Phaser.Math.Between(100, 700),
+        Phaser.Math.Between(100, 500),
+        "tank"
+      ).setCollideWorldBounds(true);
+
       tank.setDrag(100);
       tank.setAngularDrag(100);
       tank.setMaxVelocity(200);
+
+      // Identify self to server
+      socket.emit("auth", {
+        firebaseUid,
+        username: `Player_${firebaseUid.slice(0, 5)}`,
+      });
+
+      // Join the lobby
+      socket.emit("join_lobby", { lobby_id: room_id });
 
       // Mouse shooting
       this.input.on("pointerdown", () => fireBullet(this));
@@ -63,22 +79,25 @@ export default function TanksCanvas({ room_id }) {
       bullet.rotation = tank.rotation;
 
       socket.emit("fire_bullet", {
-        x: bullet.x,
-        y: bullet.y,
-        vx: bullet.body.velocity.x,
-        vy: bullet.body.velocity.y,
-        room_id,
+        lobby_id: room_id,
+        bulletData: {
+          x: bullet.x,
+          y: bullet.y,
+          vx: bullet.body.velocity.x,
+          vy: bullet.body.velocity.y,
+        },
       });
     }
 
-    function update(time, delta) {
+    function update() {
       if (!tank) return;
 
       if (cursors.left.isDown) tank.setAngularVelocity(-150);
       else if (cursors.right.isDown) tank.setAngularVelocity(150);
       else tank.setAngularVelocity(0);
 
-      if (cursors.up.isDown) this.physics.velocityFromRotation(tank.rotation, 200, tank.body.acceleration);
+      if (cursors.up.isDown)
+        this.physics.velocityFromRotation(tank.rotation, 200, tank.body.acceleration);
       else tank.setAcceleration(0);
 
       socket.emit("tank_move", {
@@ -86,35 +105,48 @@ export default function TanksCanvas({ room_id }) {
         y: tank.y,
         rotation: tank.rotation,
         room_id,
+        firebaseUid,
       });
     }
 
-    // Receive other tanks
-    socket.on("update_tanks", (tanks) => {
-      Object.keys(tanks).forEach((id) => {
-        if (id === socket.id) return;
+    socket.on("update_tanks", (tankStates) => {
+      Object.entries(tankStates).forEach(([uid, state]) => {
+        if (uid === firebaseUid) return; // skip self
 
-        if (!otherTanks[id]) {
-          otherTanks[id] = game.scene.scenes[0].physics.add.sprite(tanks[id].x, tanks[id].y, "tank").setTint(0xff0000);
+        if (!otherTanks[uid]) {
+          // Add new enemy tank
+          otherTanks[uid] = game.scene.scenes[0].physics.add.sprite(
+            state.x,
+            state.y,
+            "tank_enemy"
+          ).setCollideWorldBounds(true);
         }
 
-        otherTanks[id].x = tanks[id].x;
-        otherTanks[id].y = tanks[id].y;
-        otherTanks[id].rotation = tanks[id].rotation;
+        const enemyTank = otherTanks[uid];
+        enemyTank.x = state.x;
+        enemyTank.y = state.y;
+        enemyTank.rotation = state.rotation;
+      });
+
+      // Clean up tanks of disconnected players
+      Object.keys(otherTanks).forEach((uid) => {
+        if (!tankStates[uid]) {
+          otherTanks[uid].destroy();
+          delete otherTanks[uid];
+        }
       });
     });
 
-    // Receive fired bullets from others
-    socket.on("spawn_bullet", ({ x, y, vx, vy }) => {
-      const b = bullets.create(x, y, "bullet");
-      b.body.velocity.set(vx, vy);
+    socket.on("bullet_fired", ({ bulletData }) => {
+      const b = bullets.create(bulletData.x, bulletData.y, "bullet");
+      b.body.velocity.set(bulletData.vx, bulletData.vy);
     });
 
     return () => {
       socket.disconnect();
       game.destroy(true);
     };
-  }, [room_id]);
+  }, [room_id, firebaseUid]);
 
   return <div ref={gameContainerRef} />;
 }

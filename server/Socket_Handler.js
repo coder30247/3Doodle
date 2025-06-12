@@ -1,4 +1,3 @@
-
 // server/socket_handler.js
 
 import Player_Manager from "./managers/Player_Manager.js";
@@ -92,39 +91,24 @@ export function socket_handler(io) {
                         players: lobby.get_player_list(),
                         host_id: lobby.host_id,
                     });
+
+                    // Initialize tank state tracking
+                    lobby.tankStates = lobby.tankStates || {};
                 } catch (err) {
                     socket.emit("error", err.message);
                 }
             });
 
-            socket.on("leave_lobby", ({ lobby_id }) => {
-                const player = player_manager.get_player(firebaseUid);
-                const lobby = lobby_manager.get_lobby(lobby_id);
-
-                if (!lobby || !lobby.has_player(firebaseUid)) {
-                    socket.emit("error", "You are not in this lobby");
-                    return;
-                }
-
-                lobby_manager.remove_player_from_lobby(lobby_id, player);
-                socket.leave(lobby_id);
-                delete socket.lobby_id;
-
-                if (lobby.is_empty()) lobby_manager.delete_lobby(lobby_id);
-
-                io.to(lobby_id).emit("update_lobby", {
-                    host_id: lobby.host_id,
-                    players: lobby.get_player_list(),
-                });
-
-                socket.emit("left_lobby", { lobby_id });
-            });
-
-            // BlockTanks.io Game Events
-            socket.on("tank_update", ({ lobby_id, tankData }) => {
-                const lobby = lobby_manager.get_lobby(lobby_id);
+            socket.on("tank_move", ({ x, y, rotation, room_id, firebaseUid }) => {
+                const lobby = lobby_manager.get_lobby(room_id);
                 if (!lobby) return;
-                io.to(lobby_id).emit("tank_update", { firebaseUid, tankData });
+
+                // Update this user's tank state
+                lobby.tankStates = lobby.tankStates || {};
+                lobby.tankStates[firebaseUid] = { x, y, rotation };
+
+                // Broadcast to everyone in room
+                io.to(room_id).emit("update_tanks", lobby.tankStates);
             });
 
             socket.on("fire_bullet", ({ lobby_id, bulletData }) => {
@@ -141,6 +125,33 @@ export function socket_handler(io) {
                 }
                 io.to(lobby_id).emit("game_started");
             });
+
+            socket.on("leave_lobby", ({ lobby_id }) => {
+                const player = player_manager.get_player(firebaseUid);
+                const lobby = lobby_manager.get_lobby(lobby_id);
+
+                if (!lobby || !lobby.has_player(firebaseUid)) {
+                    socket.emit("error", "You are not in this lobby");
+                    return;
+                }
+
+                lobby_manager.remove_player_from_lobby(lobby_id, player);
+                socket.leave(lobby_id);
+                delete socket.lobby_id;
+
+                if (lobby.tankStates) delete lobby.tankStates[firebaseUid];
+
+                if (lobby.is_empty()) lobby_manager.delete_lobby(lobby_id);
+
+                io.to(lobby_id).emit("update_lobby", {
+                    host_id: lobby.host_id,
+                    players: lobby.get_player_list(),
+                });
+
+                io.to(lobby_id).emit("update_tanks", lobby.tankStates || {});
+
+                socket.emit("left_lobby", { lobby_id });
+            });
         });
 
         socket.on("disconnect", () => {
@@ -152,11 +163,16 @@ export function socket_handler(io) {
                 const lobby = lobby_manager.get_lobby(lobby_id);
                 if (lobby) {
                     lobby_manager.remove_player_from_lobby(lobby_id, player);
+                    if (lobby.tankStates) delete lobby.tankStates[firebaseUid];
+
                     if (lobby.is_empty()) lobby_manager.delete_lobby(lobby_id);
-                    else io.to(lobby_id).emit("update_lobby", {
-                        host_id: lobby.host_id,
-                        players: lobby.get_player_list(),
-                    });
+                    else {
+                        io.to(lobby_id).emit("update_lobby", {
+                            host_id: lobby.host_id,
+                            players: lobby.get_player_list(),
+                        });
+                        io.to(lobby_id).emit("update_tanks", lobby.tankStates || {});
+                    }
                 }
             }
 
