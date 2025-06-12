@@ -1,17 +1,28 @@
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react"; // Add useState
+import { useStore } from "zustand"; // Add useStore for reactive socket
 import Socket_Store from "../../states/Socket_Store.js";
 import Lobby_Store from "../../states/Lobby_Store.js";
+import Lobby_Chat from "../../components/Lobby_Chat.js";
 
 export default function Lobby() {
     const router = useRouter();
     const { lobby_id } = router.query;
-    const { socket } = Socket_Store();
+    const socket = useStore(Socket_Store, (state) => state.socket); // Reactive socket
     const { host_id, players, set_host_id, set_players } = Lobby_Store();
+    const [is_connected, set_is_connected] = useState(!!socket); // Track connection
 
     useEffect(() => {
-        if (!socket || !lobby_id) return;
+        if (!socket || !lobby_id) {
+            set_is_connected(false);
+            return;
+        }
+
         console.log(`Joining lobby: ${lobby_id}`);
+
+        socket.on("connect", () => set_is_connected(true));
+        socket.on("disconnect", () => set_is_connected(false));
+        socket.on("connect_error", () => set_is_connected(false));
 
         socket.on("update_lobby", ({ host_id, players }) => {
             console.log(`Host updated: ${host_id}`);
@@ -29,15 +40,17 @@ export default function Lobby() {
         });
 
         return () => {
+            socket.off("connect");
+            socket.off("disconnect");
+            socket.off("connect_error");
+            socket.off("update_lobby");
+            socket.off("error");
             if (socket && lobby_id) {
                 socket.emit("leave_lobby", { lobby_id });
-                socket.off("update_players");
-                socket.off("error");
             }
         };
     }, [socket, lobby_id, set_host_id, set_players, router]);
 
-    // 👇 handle exit click
     const handle_exit = () => {
         console.log(`Exiting lobby: ${lobby_id}`);
         if (socket && lobby_id) {
@@ -70,6 +83,7 @@ export default function Lobby() {
             >
                 Exit Lobby
             </button>
+            <Lobby_Chat is_connected={is_connected} />
         </div>
     );
 }

@@ -233,30 +233,68 @@ export function socket_handler(io) {
                     socket.emit("error", "Player not found");
                     return;
                 }
+
                 player.update_name(username);
-                // 🌐 Broadcast the message to all clients
+
+                const trimmed_msg = message.trim();
+
+                // 🌐 Broadcast to all connected clients
                 io.emit("global_chat:broadcast", {
-                    message: message.trim(),
+                    message: trimmed_msg,
                     sender: player.name,
                     timestamp: Date.now(),
                 });
-                io.emit(
-                    "global_chat:players",
-                    player_manager.get_all_players().map((player) => ({
+
+                // 🔄 Update online player list
+                const players_list = player_manager
+                    .get_all_players()
+                    .map((player) => ({
                         id: player.id,
                         name: player.name,
-                    }))
-                );
+                    }));
+                io.emit("global_chat:players", players_list);
             });
 
-            // 🧑‍🤝‍🧑 Send active player list to this socket
-            socket.emit(
-                "global_chat:players",
-                player_manager.get_all_players().map((player) => ({
+            // 🧑‍🤝‍🧑 GLOBAL CHAT — Initial player list on connect
+            const players_list = player_manager
+                .get_all_players()
+                .map((player) => ({
                     id: player.id,
                     name: player.name,
-                }))
-            );
+                }));
+            socket.emit("global_chat:players", players_list);
+
+            // 💬 LOBBY CHAT — Scoped chat per lobby
+            socket.on("lobby_chat:send", ({ lobby_id, message }) => {
+                const uid = socket.firebaseUid;
+
+                if (
+                    !uid ||
+                    typeof lobby_id !== "string" ||
+                    typeof message !== "string" ||
+                    !message.trim()
+                ) {
+                    socket.emit("error", "Invalid lobby chat input");
+                    return;
+                }
+
+                const player = player_manager.get_player(uid);
+                const lobby = lobby_manager.get_lobby(lobby_id);
+
+                if (!player || !lobby || !lobby.has_player(uid)) {
+                    socket.emit("error", "Not in this lobby");
+                    return;
+                }
+
+                const trimmed_msg = message.trim();
+
+                // 📢 Send message only to clients in this lobby
+                io.to(lobby_id).emit("lobby_chat:broadcast", {
+                    message: trimmed_msg,
+                    sender: player.name,
+                    timestamp: Date.now(),
+                });
+            });
         });
 
         socket.on("disconnect", () => {
