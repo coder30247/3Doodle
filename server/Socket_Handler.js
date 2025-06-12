@@ -295,6 +295,51 @@ export function socket_handler(io) {
                     timestamp: Date.now(),
                 });
             });
+
+            // 🕹️ START GAME
+            socket.on("start_game", ({ lobby_id }) => {
+                const firebaseUid = socket.firebaseUid;
+
+                if (!firebaseUid) {
+                    console.log(`❌ start_game without auth: ${socket.id}`);
+                    socket.emit("error", "Unauthorized");
+                    return;
+                }
+
+                if (!lobby_id || typeof lobby_id !== "string") {
+                    socket.emit("error", "Invalid lobby ID");
+                    return;
+                }
+
+                const player = player_manager.get_player(firebaseUid);
+                if (!player) {
+                    console.log(
+                        `❌ start_game failed — player not found: ${firebaseUid}`
+                    );
+                    socket.emit("error", "Player not found");
+                    return;
+                }
+
+                const lobby = lobby_manager.get_lobby(lobby_id);
+                if (!lobby) {
+                    socket.emit("error", "Lobby not found");
+                    return;
+                }
+
+                if (lobby.host_id !== firebaseUid) {
+                    socket.emit("error", "Only host can start the game");
+                    return;
+                }
+
+                if (lobby.is_empty()) {
+                    socket.emit("error", "Cannot start an empty lobby");
+                    return;
+                }
+
+                // Notify all players in the lobby
+                io.to(lobby_id).emit("game_started");
+                console.log(`🎮 Game started in lobby: ${lobby_id}`);
+            });
         });
 
         socket.on("disconnect", () => {

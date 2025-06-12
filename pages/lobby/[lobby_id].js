@@ -33,6 +33,11 @@ export default function Lobby() {
             set_host_id(host_id);
         });
 
+        socket.on("game_started", () => {
+            console.log(`Game started in lobby: ${lobby_id}`);
+            router.push(`/game/${lobby_id}`);
+        });
+
         socket.on("error", (message) => {
             console.error(`Lobby error: ${message}`);
             router.push("/");
@@ -62,6 +67,13 @@ export default function Lobby() {
         });
     };
 
+    const handle_start_game = () => {
+        console.log(`Starting game in lobby: ${lobby_id}`);
+        if (socket && lobby_id) {
+            socket.emit("start_game", { lobby_id });
+        }
+    };
+
     return (
         <div className="flex flex-col items-center p-6 min-h-screen bg-gray-100">
             <h1 className="text-3xl font-bold text-blue-600">
@@ -83,6 +95,13 @@ export default function Lobby() {
             >
                 Exit Lobby
             </button>
+            <button
+                onClick={handle_start_game}
+                className="mt-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600"
+            >
+                Start Game
+            </button>
+
             <Lobby_Chat is_connected={is_connected} />
         </div>
     );
