@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/Firebase.js";
+import { set_user_id } from "../states/User_Store"; // <-- import this
 
 export default function Login() {
     const [email, set_email] = useState("");
@@ -23,6 +24,7 @@ export default function Login() {
                 password
             );
             console.log(`Email login successful: ${result.user.uid}`);
+            set_user_id(result.user.uid); // <-- set user_id in Zustand
             router.push("/"); // socket handled by Login_Gate.js
         } catch (err) {
             console.error(`Email login failed: ${err}`);

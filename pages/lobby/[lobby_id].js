@@ -1,13 +1,17 @@
-import { useRouter } from "next/router";
 import { useEffect } from "react";
+import { useRouter } from "next/router";
 import Socket_Store from "../../states/Socket_Store.js";
 import Lobby_Store from "../../states/Lobby_Store.js";
+import User_Store from "../../states/User_Store.js";
+import Start_Game_Button from "../../components/buttons/Start_Game_Button.js";
 
 export default function Lobby() {
     const router = useRouter();
     const { lobby_id } = router.query;
     const { socket } = Socket_Store();
     const { host_id, players, set_host_id, set_players } = Lobby_Store();
+    const { user_id } = User_Store();
+    console.log("user_id:", user_id, "host_id:", host_id);
 
     useEffect(() => {
         if (!socket || !lobby_id) return;
@@ -37,6 +41,14 @@ export default function Lobby() {
         };
     }, [socket, lobby_id, set_host_id, set_players, router]);
 
+    useEffect(() => {
+        if (!socket) return;
+        socket.on("game_started", () => {
+            router.push(`/game/${lobby_id}`);
+        });
+        return () => socket.off("game_started");
+    }, [socket, router, lobby_id]);
+
     // 👇 handle exit click
     const handle_exit = () => {
         console.log(`Exiting lobby: ${lobby_id}`);
@@ -64,6 +76,7 @@ export default function Lobby() {
                     </li>
                 ))}
             </ul>
+            <Start_Game_Button user_id={user_id} host_id={host_id} lobby_id={lobby_id} />
             <button
                 onClick={handle_exit}
                 className="mt-4 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600"

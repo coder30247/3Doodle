@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/Firebase.js";
+import { set_user_id } from "../states/User_Store"; // <-- add this
 
 export default function Signup() {
     const [email, set_email] = useState("");
@@ -23,6 +24,7 @@ export default function Signup() {
                 password
             );
             console.log(`Signup successful: ${result.user.uid}`);
+            set_user_id(result.user.uid); // <-- set user_id in Zustand
             router.push("/"); // redirect to home
         } catch (err) {
             console.error(`Signup failed: ${err}`);
