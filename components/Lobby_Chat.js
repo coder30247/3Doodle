@@ -36,7 +36,7 @@ export default function Lobby_Chat({ is_connected }) {
     }, [socket, lobby_id]);
 
     const send_message = () => {
-        console.log("Sending message:", input_message,lobby_id, is_connected);
+        console.log("Sending message:", input_message, lobby_id, is_connected);
 
         if (input_message.trim() && lobby_id && is_connected) {
             socket.emit("lobby_chat:send", {

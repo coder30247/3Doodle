@@ -1,3 +1,6 @@
-export default function App({ Component, page_props }) {
-    return <Component {...page_props} />;
+import "../styles/globals.css";
+
+export default function App({ Component, pageProps }) {
+  return <Component {...pageProps} />;
 }
+

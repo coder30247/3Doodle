@@ -1,7 +1,8 @@
-# Dependencies
-node_modules/
+# dependencies
+/node_modules
 
-# Next.js
-.next/
-.out/
+# next.js
+/.next/
+
+# env files (can opt-in for committing if needed)
 .env.local

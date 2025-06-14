@@ -17,7 +17,7 @@ export default function Join_Lobby_Button() {
                 lobby_id: lobby_id_input,
                 username,
             });
-            socket.on("joined_lobby", ({ lobby_id, host_id, players}) => {
+            socket.on("joined_lobby", ({ lobby_id, host_id, players }) => {
                 set_lobby_id(lobby_id);
                 set_players(players);
                 set_host_id(host_id);

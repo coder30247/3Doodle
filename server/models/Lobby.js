@@ -25,10 +25,9 @@ export default class Lobby {
             throw new Error(`Player with ID ${player_id} not found in lobby`);
         }
         this.players.delete(player_id);
-        if (player.id === this.host_id ) {
+        if (player.id === this.host_id) {
             this.assign_new_host();
         }
-
     }
 
     assign_new_host() {
