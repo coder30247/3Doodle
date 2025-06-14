@@ -10,7 +10,6 @@ export default function Global_Chat() {
     const socket = useStore(Socket_Store, (state) => state.socket);
     const [input_message, set_input_message] = useState("");
     const [message_list, set_message_list] = useState([]);
-    const [online_players, set_online_players] = useState([]);
     const [is_connected, set_is_connected] = useState(false);
     const list_ref = useRef(null);
 
@@ -34,10 +33,6 @@ export default function Global_Chat() {
 
         socket.on("global_chat:broadcast", (data) => {
             append_message(data); // { id, sender, message, timestamp }
-        });
-
-        socket.on("global_chat:players", (data) => {
-            set_online_players(data); // [{ id, name }]
         });
 
         return () => {
@@ -71,10 +66,6 @@ export default function Global_Chat() {
             <h3 className="text-lg font-semibold text-blue-600 mb-2">
                 Global Chat
             </h3>
-            <div className="mb-2 text-sm text-gray-500">
-                Online: {online_players.map((p) => p.name).join(", ")}
-                {!is_connected && " (Disconnected)"}
-            </div>
 
             <div className="h-48 overflow-y-auto border border-gray-300 rounded mb-2 p-2 text-sm">
                 <FixedSizeList

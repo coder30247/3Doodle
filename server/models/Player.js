@@ -1,13 +1,13 @@
 export default class Player {
     constructor({ id, name, socket_id }) {
         this.id = id; // firebase uid
-        this.name = name.trim();
+        this.name = name;
         this.socket_id = socket_id;
         this.is_ready = false;
     }
 
     update_name(new_name) {
-        this.name = new_name.trim();
+        this.name = new_name;
     }
 
     mark_ready() {

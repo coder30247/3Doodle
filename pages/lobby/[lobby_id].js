@@ -84,8 +84,9 @@ export default function Lobby() {
             <ul className="list-disc pl-6 mt-2">
                 {players.map((player) => (
                     <li key={player.id} className="text-gray-700">
-                        {player.display_name || player.name}{" "}
+                        { player.name}{" "}
                         {player.id === host_id ? "(Host)" : ""}
+                        {player.id === socket.uid ? " (You)" : ""}
                     </li>
                 ))}
             </ul>

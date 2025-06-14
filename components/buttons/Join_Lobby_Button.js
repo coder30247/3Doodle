@@ -15,7 +15,7 @@ export default function Join_Lobby_Button() {
         if (lobby_id_input.length === 6) {
             socket.emit("join_lobby", {
                 lobby_id: lobby_id_input,
-                username,
+                username: username,
             });
             socket.on("joined_lobby", ({ lobby_id, host_id, players }) => {
                 set_lobby_id(lobby_id);

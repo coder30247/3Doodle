@@ -15,19 +15,15 @@ export default function Lobby_Chat({ is_connected }) {
     const [message_list, set_message_list] = useState([]);
     const list_ref = useRef(null);
 
-    const append_message = debounce((data) => {
-        set_message_list((prev) => {
-            const updated = [...prev, data];
-            list_ref.current?.scrollToItem(updated.length, "end");
-            return updated;
-        });
-    }, 100);
-
     useEffect(() => {
         if (!socket || !lobby_id) return;
 
         socket.on("lobby_chat:broadcast", (data) => {
-            append_message(data); // { firebaseUid, message, sender, timestamp }
+            set_message_list((prev) => {
+                const updated = [...prev, data];
+                list_ref.current?.scrollToItem(updated.length, "end");
+                return updated;
+            });
         });
 
         return () => {
@@ -40,7 +36,8 @@ export default function Lobby_Chat({ is_connected }) {
 
         if (input_message.trim() && lobby_id && is_connected) {
             socket.emit("lobby_chat:send", {
-                lobby_id,
+                lobby_id: lobby_id,
+                username: username,
                 message: input_message,
             });
             set_input_message("");
