@@ -64,10 +64,14 @@ const initialize_socket = (current_user, socket_ref) => {
 export { initialize_socket };
 
 export default function Login_Gate({ children }) {
-    const { firebase_uid, set_firebase_uid, set_is_authenticated, reset_auth } =
-        Auth_Store();
-    const { reset_socket } = Socket_Store();
-    const { reset_user } = User_Store();
+    const firebase_uid = Auth_Store((state) => state.firebase_uid);
+    const set_firebase_uid = Auth_Store((state) => state.set_firebase_uid);
+    const set_is_authenticated = Auth_Store(
+        (state) => state.set_is_authenticated
+    );
+    const reset_auth = Auth_Store((state) => state.reset_auth);
+    const reset_socket = Socket_Store((state) => state.reset_socket);
+    const reset_user = User_Store((state) => state.reset_user);
     const [loading, set_loading] = useState(true);
     const [login_error, set_login_error] = useState(null);
     const socket_ref = useRef(null);

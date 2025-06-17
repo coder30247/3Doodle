@@ -7,8 +7,10 @@ import User_Store from "../states/User_Store.js";
 import Global_Chat from "../components/Global_Chat";
 
 function Home_Content() {
-    const { firebase_uid, is_authenticated } = Auth_Store();
-    const { username, set_username } = User_Store();
+    const firebase_uid = Auth_Store((state) => state.firebase_uid);
+    const is_authenticated = Auth_Store((state) => state.is_authenticated);
+    const username = User_Store((state) => state.username);
+    const set_username = User_Store((state) => state.set_username);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">

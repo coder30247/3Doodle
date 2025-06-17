@@ -6,7 +6,7 @@ import { FixedSizeList } from "react-window";
 import { debounce } from "lodash";
 
 export default function Global_Chat() {
-    const { username } = User_Store();
+    const username = useStore(User_Store, (state) => state.username);
     const socket = useStore(Socket_Store, (state) => state.socket);
     const [input_message, set_input_message] = useState("");
     const [message_list, set_message_list] = useState([]);

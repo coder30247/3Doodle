@@ -6,9 +6,11 @@ import Lobby_Store from "../../states/Lobby_Store.js";
 
 export default function Join_Lobby_Button() {
     const [lobby_id_input, set_lobby_id_input] = useState("");
-    const { socket } = Socket_Store();
-    const { username } = User_Store();
-    const { set_lobby_id, set_players, set_host_id } = Lobby_Store();
+    const socket = Socket_Store((state) => state.socket);
+    const username = User_Store((state) => state.username);
+    const set_lobby_id = Lobby_Store((state) => state.set_lobby_id);
+    const set_players = Lobby_Store((state) => state.set_players);
+    const set_host_id = Lobby_Store((state) => state.set_host_id)
     const router = useRouter();
 
     const handle_join_lobby = () => {

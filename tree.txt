@@ -1,0 +1,48 @@
+3DOODLE/
+├── .next/                         # Next.js build output
+├── components/
+│   ├── buttons/
+│   │   ├── Create_Lobby_Button.js
+│   │   ├── Guest_Login_Button.js
+│   │   ├── Join_Lobby_Button.js
+│   │   ├── Login_Button.js
+│   │   ├── Logout_Button.js
+│   │   ├── Signup_Button.js
+│   ├── Game_Canvas.js
+│   ├── Global_Chat.js
+│   ├── Lobby_Chat.js
+│   ├── Login_Gate.js
+├── lib/
+│   ├── Firebase.js
+├── node_modules/
+├── pages/
+│   ├── game/
+│   │   ├── [room_id].js          # Game canvas/page
+│   ├── lobby/
+│   │   ├── [lobby_id].js         # Lobby UI page
+│   ├── _app.js                   # App wrapper (global styles/providers)
+│   ├── index.js                  # Home/entry page
+│   ├── login.js
+│   ├── signup.js
+├── server/
+│   ├── handlers/
+│   │   ├── Auth_Handler.js
+│   │   ├── Game_Handler.js
+│   │   ├── Global_Chat_Handler.js
+│   │   ├── Lobby_Chat_Handler.js
+│   │   ├── Lobby_Handler.js
+│   ├── managers/
+│   │   ├── Lobby_Manager.js
+│   │   ├── Player_Manager.js
+│   ├── models/
+│   │   ├── Lobby.js
+│   │   ├── Player.js
+│   ├── index.js                  # Entry point of the server
+│   ├── Socket_Handler.js         # Central socket.io logic
+├── states/
+│   ├── Auth_Store.js
+│   ├── Lobby_Store.js
+│   ├── Socket_Store.js
+│   ├── User_Store.js
+├── styles/
+    └── ... (global CSS or Tailwind files)

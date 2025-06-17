@@ -7,7 +7,7 @@ import { FixedSizeList } from "react-window";
 import { debounce } from "lodash";
 
 export default function Lobby_Chat({ is_connected }) {
-    const { username } = User_Store();
+    const username = useStore(User_Store, (state) => state.username);
     const socket = useStore(Socket_Store, (state) => state.socket);
     const router = useRouter();
     const { lobby_id } = router.query;

@@ -20,13 +20,4 @@ const Lobby_Store = create((set) => ({
             max_players: 4,
         }),
 }));
-
-const set_lobby_id = (id) => Lobby_Store.getState().set_lobby_id(id);
-const set_players = (players_list) =>
-    Lobby_Store.getState().set_players(players_list);
-const set_host_id = (id) => Lobby_Store.getState().set_host_id(id);
-const set_max_players = (num) => Lobby_Store.getState().set_max_players(num);
-const reset_lobby = () => Lobby_Store.getState().reset_lobby();
-
 export default Lobby_Store;
-export { set_lobby_id, set_players, set_host_id, set_max_players, reset_lobby };

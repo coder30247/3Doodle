@@ -9,7 +9,12 @@ export default function Lobby() {
     const router = useRouter();
     const { lobby_id } = router.query;
     const socket = useStore(Socket_Store, (state) => state.socket); // Reactive socket
-    const { host_id, players, set_host_id, set_players } = Lobby_Store();
+    const host_id = useStore(Lobby_Store, (state) => state.host_id); 
+    const players = useStore(Lobby_Store, (state) => state.players);
+    const set_host_id = useStore(Lobby_Store, (state) => state.set_host_id);
+    const set_players = useStore(Lobby_Store, (state) => state.set_players);
+    
+    const [is_exiting, set_is_exiting] = useState(false); // Track exit state
     const [is_connected, set_is_connected] = useState(!!socket); // Track connection
 
     useEffect(() => {
@@ -50,7 +55,7 @@ export default function Lobby() {
             socket.off("connect_error");
             socket.off("update_lobby");
             socket.off("error");
-            if (socket && lobby_id) {
+            if (socket && lobby_id && is_exiting) {
                 socket.emit("leave_lobby", { lobby_id });
             }
         };
@@ -58,6 +63,7 @@ export default function Lobby() {
 
     const handle_exit = () => {
         console.log(`Exiting lobby: ${lobby_id}`);
+        set_is_exiting(true); // Set exit state
         if (socket && lobby_id) {
             socket.emit("leave_lobby", { lobby_id });
         }
