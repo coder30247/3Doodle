@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { auth } from "../lib/Firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { io } from "socket.io-client";
+import { motion } from "framer-motion";
 
 import Auth_Store from "../states/Auth_Store.js";
 import Socket_Store from "../states/Socket_Store.js";
@@ -9,6 +10,12 @@ import User_Store from "../states/User_Store.js";
 import Login_Button from "./buttons/Login_Button.js";
 import Signup_Button from "./buttons/Signup_Button.js";
 import Guest_Login_Button from "./buttons/Guest_Login_Button.js";
+import GridBg from "./frontend/GridBg.jsx";
+import StyledWrapper from "./frontend/StyledWrapper.js"; 
+import BG1 from "./frontend/bg1.jsx";
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;900&display=swap" rel="stylesheet" />
+
 
 const initialize_socket = (current_user, socket_ref) => {
     const { set_socket, set_connected } = Socket_Store.getState();
@@ -150,26 +157,44 @@ export default function Login_Gate({ children }) {
     }
 
     if (!firebase_uid) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen space-y-6 bg-gray-100">
-                <h1 className="text-4xl font-bold text-blue-600">
-                    Welcome to 3Doodle
-                </h1>
-                <div className="flex flex-col space-y-4 w-64">
-                    <p className="text-lg text-gray-700">
-                        Please log in to continue
-                    </p>
-                    <Login_Button />
-                    <Signup_Button />
-                    <Guest_Login_Button
-                        loading={loading}
-                        set_login_error={set_login_error}
-                        set_loading={set_loading}
-                    />
-                </div>
-            </div>
-        );
-    }
+    return (
+        <div className="relative min-h-screen overflow-hidden">
+            <GridBg />
+            <BG1/>
+
+  <div className="flex flex-col items-center justify-center min-h-screen relative">
+    
+    {/* Logo overlapping the card */}
+    <div className="relative z-10 -translate-y-2 pointer-events-none">
+      <motion.img
+        src="/logo.png"
+        alt="3Doodle Logo"
+        className="w-[550px] h-auto mx-auto"
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+
+    {/* Card with buttons */}
+    <StyledWrapper className="relative z-0 -translate-y-45">
+      <div className="card">
+        <div className="content flex flex-col items-center justify-center space-y-5 w-full h-full">
+          <Login_Button />
+          <Signup_Button />
+          <Guest_Login_Button
+            loading={loading}
+            set_login_error={set_login_error}
+            set_loading={set_loading}
+          />
+        </div>
+      </div>
+    </StyledWrapper>
+
+  </div>
+</div>
+
+    );
+}
 
     return children;
 }
