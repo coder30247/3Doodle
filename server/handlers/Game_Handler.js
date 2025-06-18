@@ -1,6 +1,3 @@
-import Player_Manager from "../managers/Player_Manager.js";
-import Lobby_Manager from "../managers/Lobby_Manager.js";
-
 export function game_handler(io, socket, player_manager, lobby_manager) {
     socket.on("start_game", ({ lobby_id }) => {
         const firebaseUid = socket.firebaseUid;
@@ -47,8 +44,9 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
     });
 
     socket.on("player:update_position", ({ room_id, x, y }) => {
+        // Broadcast the updated position to all other players in the room
         socket.to(room_id).emit("player:position_update", {
-            uid: socket.id,
+            id: socket.id,
             x,
             y,
         });
@@ -64,7 +62,7 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
         }
 
         const players = lobby.get_player_list().map((player) => ({
-            uid: player.id,
+            uid: player.firebaseUid,
             x: 100, // Default position
             y: 450,
         }));

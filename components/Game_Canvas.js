@@ -1,11 +1,23 @@
 import { useEffect, useRef } from "react";
+import Lobby_Store from "../states/Lobby_Store.js";
+import Auth_Store from "../states/Auth_Store.js";
+import Socket_Store from "../states/Socket_Store.js";
 import Phaser from "phaser";
 
 export default function Game_Canvas({ room_id }) {
     const gameContainerRef = useRef(null);
+    const players = Lobby_Store((state) => state.players);
+    const your_id = Auth_Store((state) => state.firebase_uid);
+    const socket = Socket_Store((state) => state.socket);
+    const sprite_map = useRef(new Map());
+    const sprite_positions = useRef(new Map());
 
     useEffect(() => {
         if (!room_id || !gameContainerRef.current) return;
+
+        socket.on("player:position_update", ({ id, x, y }) => {
+            sprite_positions.current.set(id, { x, y });
+        });
 
         const config = {
             type: Phaser.AUTO,
@@ -44,32 +56,52 @@ export default function Game_Canvas({ room_id }) {
             const platforms = this.physics.add.staticGroup();
             platforms.create(400, 580, "ground").setScale(2).refreshBody();
 
-            const player = this.physics.add
-                .sprite(100, 450, "player")
-                .setScale(0.5);
-            player.setBounce(0.1);
-            player.setCollideWorldBounds(true);
-            this.physics.add.collider(player, platforms);
+            let index = 0;
 
-            this.cursors = this.input.keyboard.createCursorKeys();
-            this.player = player;
+            players.forEach((player) => {
+                const x = 200 + index * 50;
+                const y = 450;
+
+                const sprite = this.physics.add.sprite(x, y, "player");
+                sprite.setBounce(0.2);
+                sprite.setCollideWorldBounds(true);
+                this.physics.add.collider(sprite, platforms);
+
+                // ✅ Correct: Using sprite_map passed in from useRef
+                sprite_map.current.set(player.id, sprite);
+
+                if (player.id === your_id) {
+                    this.player = sprite;
+                    this.cursors = this.input.keyboard.createCursorKeys();
+                }
+
+                index++;
+            });
         }
 
         function update() {
             const speed = 200;
-            const { cursors, player } = this;
-
-            player.setVelocityX(0);
-
-            if (cursors.left.isDown) {
-                player.setVelocityX(-speed);
-            } else if (cursors.right.isDown) {
-                player.setVelocityX(speed);
+            if (this.player) {
+                this.player.setVelocityX(0);
+                if (this.cursors.left.isDown) {
+                    this.player.setVelocityX(-speed);
+                } else if (this.cursors.right.isDown) {
+                    this.player.setVelocityX(speed);
+                }
+                if (this.cursors.up.isDown && this.player.body.touching.down) {
+                    this.player.setVelocityY(-400);
+                }
+                const { x, y } = this.player;
+                socket.emit("player:update_position", { room_id, x, y });
             }
-
-            if (cursors.up.isDown && player.body.touching.down) {
-                player.setVelocityY(-400);
-            }
+            sprite_positions.current.forEach((pos, id) => {
+                if (id !== your_id) {
+                    const sprite = sprite_map.current.get(id);
+                    if (sprite) {
+                        sprite.setPosition(pos.x, pos.y);
+                    }
+                }
+            });
         }
 
         return () => {
