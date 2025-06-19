@@ -89,10 +89,10 @@ export default function Lobby() {
             <h2 className="text-xl font-semibold mt-4">Players in Lobby</h2>
             <ul className="list-disc pl-6 mt-2">
                 {players.map((player) => (
-                    <li key={player.id} className="text-gray-700">
+                    <li key={player.firebase_uid} className="text-gray-700">
                         { player.name}{" "}
-                        {player.id === host_id ? "(Host)" : ""}
-                        {player.socket_id === socket.firebaseUid ? " (You)" : ""}
+                        {player.firebase_uid === host_id ? "(Host)" : ""}
+                        {player.socket_id === socket.id ? " (You)" : ""}
                     </li>
                 ))}
             </ul>

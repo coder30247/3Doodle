@@ -46,7 +46,7 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
     socket.on("player:update_position", ({ room_id, x, y }) => {
         // Broadcast the updated position to all other players in the room
         socket.to(room_id).emit("player:position_update", {
-            firebase_uid: socket.id,
+            firebase_uid: socket.firebase_uid,
             x,
             y,
         });

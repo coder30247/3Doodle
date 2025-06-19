@@ -46,7 +46,7 @@ export default function Lobby_Chat({ is_connected }) {
 
     const Message_Row = ({ index, style }) => (
         <div
-            key={`${message_list[index].firebaseUid}_${message_list[index].timestamp}`}
+            key={`${message_list[index].firebase_uid}_${message_list[index].timestamp}`}
             style={style}
             className="mb-1"
         >

@@ -55,7 +55,11 @@ export default function Global_Chat() {
     };
 
     const Message_Row = ({ index, style }) => (
-        <div key={message_list[index].id} style={style} className="mb-1">
+        <div
+            key={message_list[index].firebase_uid}
+            style={style}
+            className="mb-1"
+        >
             <span className="font-bold">{message_list[index].sender}</span>:{" "}
             {message_list[index].message}
         </div>

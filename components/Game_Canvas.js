@@ -68,9 +68,9 @@ export default function Game_Canvas({ room_id }) {
                 this.physics.add.collider(sprite, platforms);
 
                 // ✅ Correct: Using sprite_map passed in from useRef
-                sprite_map.current.set(player.id, sprite);
+                sprite_map.current.set(player.firebase_uid, sprite);
 
-                if (player.id === your_id) {
+                if (player.firebase_uid === your_id) {
                     this.player = sprite;
                     this.cursors = this.input.keyboard.createCursorKeys();
                 }
@@ -94,7 +94,7 @@ export default function Game_Canvas({ room_id }) {
                 const { x, y } = this.player;
                 socket.emit("player:update_position", { room_id, x, y });
             }
-            sprite_positions.current.forEach((firebase_uid, pos) => {
+            sprite_positions.current.forEach((pos, firebase_uid) => {
                 if (firebase_uid !== your_id) {
                     const sprite = sprite_map.current.get(firebase_uid);
                     if (sprite) {
