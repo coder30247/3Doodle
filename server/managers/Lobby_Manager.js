@@ -35,7 +35,7 @@ export default class Lobby_Manager {
         if (!lobby) {
             throw new Error(`Lobby ${lobby_id} not found`);
         }
-        lobby.remove_player(player.id);
+        lobby.remove_player(player.firebase_uid);
     }
 
     get_all_lobbies() {

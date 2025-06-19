@@ -92,7 +92,7 @@ export default function Lobby() {
                     <li key={player.id} className="text-gray-700">
                         { player.name}{" "}
                         {player.id === host_id ? "(Host)" : ""}
-                        {player.id === socket.uid ? " (You)" : ""}
+                        {player.socket_id === socket.firebaseUid ? " (You)" : ""}
                     </li>
                 ))}
             </ul>

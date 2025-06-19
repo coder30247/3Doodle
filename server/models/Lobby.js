@@ -1,8 +1,8 @@
 export default class Lobby {
     constructor(lobby_id, host_player, max_players = 8, name = "") {
-        this.id = lobby_id; // unique lobby identifier
+        this.lobby_id = lobby_id; // unique lobby identifier
         this.name = name ? name.trim() : `lobby-${lobby_id}`; // lobby display name
-        this.host_id = host_player.id; // host player id
+        this.host_id = host_player.firebase_uid; // host player id
         this.max_players = max_players; // maximum player limit
         this.players = new Map(); // map of player id to player object
         this.game_state = "lobby"; // state: lobby, in_game, finished
@@ -13,10 +13,10 @@ export default class Lobby {
         if (this.players.size >= this.max_players) {
             throw new Error("Lobby is full");
         }
-        if (this.players.has(player.id)) {
+        if (this.players.has(player.firebase_uid)) {
             throw new Error("Player already in lobby");
         }
-        this.players.set(player.id, player);
+        this.players.set(player.firebase_uid, player);
     }
 
     remove_player(player_id) {
@@ -33,7 +33,7 @@ export default class Lobby {
     assign_new_host() {
         const new_host = this.get_player_list()[0];
         if (new_host) {
-            this.host_id = new_host.id;
+            this.host_id = new_host.firebase_uid;
         }
     }
 
@@ -45,8 +45,8 @@ export default class Lobby {
         return Array.from(this.players.values());
     }
 
-    has_player(player_id) {
-        return this.players.has(player_id);
+    has_player(firebase_uid) {
+        return this.players.has(firebase_uid);
     }
 
     set_game_state(state) {

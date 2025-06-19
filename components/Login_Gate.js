@@ -44,7 +44,7 @@ const initialize_socket = (current_user, socket_ref) => {
             current_user.displayName ||
             (current_user.isAnonymous ? "Guest" : "User");
         socket_ref.current.emit("auth", {
-            firebaseUid: current_user.uid,
+            firebase_uid: current_user.uid,
             username,
         });
         set_username(username); // Set username in User_Store

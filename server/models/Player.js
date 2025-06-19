@@ -1,6 +1,6 @@
 export default class Player {
-    constructor({ id, name, socket_id }) {
-        this.id = id; // firebase uid
+    constructor({ firebase_uid, name, socket_id }) {
+        this.firebase_uid = firebase_uid; // firebase uid
         this.name = name;
         this.socket_id = socket_id;
         this.is_ready = false;

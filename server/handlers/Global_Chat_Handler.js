@@ -1,13 +1,13 @@
 export function global_chat_handler(io, socket, player_manager) {
     socket.on("global_chat:send", ({ username, message }) => {
-        const uid = socket.firebaseUid;
+        const firebase_uid = socket.firebase_uid;
 
-        if (!uid || typeof message !== "string" || !message.trim()) {
+        if (!firebase_uid || typeof message !== "string" || !message.trim()) {
             socket.emit("error", "Invalid global chat message");
             return;
         }
 
-        const player = player_manager.get_player(uid);
+        const player = player_manager.get_player(firebase_uid);
         if (!player) {
             socket.emit("error", "Player not found");
             return;

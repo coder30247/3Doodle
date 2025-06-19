@@ -1,10 +1,10 @@
 export function lobby_chat_handler(io, socket, player_manager, lobby_manager) {
     socket.on("lobby_chat:send", ({ lobby_id, username, message }) => {
-        const uid = socket.firebaseUid;
+        const firebase_uid = socket.firebase_uid;
 
 
         if (
-            !uid ||
+            !firebase_uid ||
             typeof lobby_id !== "string" ||
             typeof message !== "string" ||
             !message.trim()
@@ -13,10 +13,10 @@ export function lobby_chat_handler(io, socket, player_manager, lobby_manager) {
             return;
         }
 
-        const player = player_manager.get_player(uid);
+        const player = player_manager.get_player(firebase_uid);
         const lobby = lobby_manager.get_lobby(lobby_id);
 
-        if (!player || !lobby || !lobby.has_player(uid)) {
+        if (!player || !lobby || !lobby.has_player(firebase_uid)) {
             socket.emit("error", "Not in this lobby");
             return;
         }

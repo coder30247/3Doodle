@@ -15,8 +15,8 @@ export default function Game_Canvas({ room_id }) {
     useEffect(() => {
         if (!room_id || !gameContainerRef.current) return;
 
-        socket.on("player:position_update", ({ id, x, y }) => {
-            sprite_positions.current.set(id, { x, y });
+        socket.on("player:position_update", ({ firebase_uid, x, y }) => {
+            sprite_positions.current.set(firebase_uid, { x, y });
         });
 
         const config = {
@@ -94,9 +94,9 @@ export default function Game_Canvas({ room_id }) {
                 const { x, y } = this.player;
                 socket.emit("player:update_position", { room_id, x, y });
             }
-            sprite_positions.current.forEach((pos, id) => {
-                if (id !== your_id) {
-                    const sprite = sprite_map.current.get(id);
+            sprite_positions.current.forEach((firebase_uid, pos) => {
+                if (firebase_uid !== your_id) {
+                    const sprite = sprite_map.current.get(firebase_uid);
                     if (sprite) {
                         sprite.setPosition(pos.x, pos.y);
                     }

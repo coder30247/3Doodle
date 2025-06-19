@@ -1,8 +1,8 @@
 export function game_handler(io, socket, player_manager, lobby_manager) {
     socket.on("start_game", ({ lobby_id }) => {
-        const firebaseUid = socket.firebaseUid;
+        const firebase_uid = socket.firebase_uid;
 
-        if (!firebaseUid) {
+        if (!firebase_uid) {
             console.log(`❌ start_game without auth: ${socket.id}`);
             socket.emit("error", "Unauthorized");
             return;
@@ -13,10 +13,10 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
             return;
         }
 
-        const player = player_manager.get_player(firebaseUid);
+        const player = player_manager.get_player(firebase_uid);
         if (!player) {
             console.log(
-                `❌ start_game failed — player not found: ${firebaseUid}`
+                `❌ start_game failed — player not found: ${firebase_uid}`
             );
             socket.emit("error", "Player not found");
             return;
@@ -28,7 +28,7 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
             return;
         }
 
-        if (lobby.host_id !== firebaseUid) {
+        if (lobby.host_id !== firebase_uid) {
             socket.emit("error", "Only host can start the game");
             return;
         }
@@ -46,27 +46,9 @@ export function game_handler(io, socket, player_manager, lobby_manager) {
     socket.on("player:update_position", ({ room_id, x, y }) => {
         // Broadcast the updated position to all other players in the room
         socket.to(room_id).emit("player:position_update", {
-            id: socket.id,
+            firebase_uid: socket.id,
             x,
             y,
         });
-    });
-
-    socket.on("game:request_initial_players", ({ room_id }) => {
-        const firebaseUid = socket.firebaseUid;
-        const lobby = lobby_manager.get_lobby(room_id);
-
-        if (!lobby || !lobby.has_player(firebaseUid)) {
-            socket.emit("error", "Not in this lobby");
-            return;
-        }
-
-        const players = lobby.get_player_list().map((player) => ({
-            uid: player.firebaseUid,
-            x: 100, // Default position
-            y: 450,
-        }));
-
-        socket.emit("game:initial_players", { players });
     });
 }
